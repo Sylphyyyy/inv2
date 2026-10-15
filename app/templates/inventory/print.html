@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ procurement.title }} - Procurement</title>
+  <style>
+    body { color: #111; font: 14px Arial, sans-serif; margin: 2rem; }
+    h1 { margin-bottom: 0.35rem; }
+    .metadata { color: #444; margin-bottom: 1.5rem; }
+    .actions { margin-bottom: 1rem; }
+    button { cursor: pointer; padding: 0.5rem 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #777; padding: 0.5rem; text-align: left; vertical-align: top; }
+    th { background: #eee; }
+    @media print {
+      body { margin: 0; }
+      .actions { display: none; }
+      th { background: #eee !important; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <div class="actions">
+    <button type="button" onclick="window.print()">Print</button>
+  </div>
+  <h1>{{ procurement.title }}</h1>
+  <div class="metadata">
+    <div><strong>Status:</strong> {{ procurement.status }}</div>
+    <div><strong>Agency:</strong> {{ procurement.agency or 'N/A' }}</div>
+    <div><strong>Municipality:</strong> {{ procurement.municipality or 'N/A' }}</div>
+    <div><strong>Approved Budget (ABC):</strong>
+      {% if procurement.abc %}₱{{ "{:,.2f}".format(procurement.abc|float) }}{% else %}N/A{% endif %}
+    </div>
+    <div><strong>Pre-Bid Date:</strong> {{ procurement.pre_bid_date or 'N/A' }}</div>
+    <div><strong>Place of Bidding:</strong> {{ procurement.place_of_bidding or 'N/A' }}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Item Name</th>
+        <th>Description</th>
+        <th>Unit</th>
+        <th>Unit Price</th>
+        <th>Target Quantity</th>
+        <th>Current Quantity</th>
+        <th>Expiration Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in procurement.items %}
+      <tr>
+        <td>{{ item.code or '—' }}</td>
+        <td>{{ item.name }}</td>
+        <td>{{ item.category or '—' }}</td>
+        <td>{{ item.unit or '—' }}</td>
+        <td>₱{{ "{:,.2f}".format(item.price|float) }}</td>
+        <td>{{ item.target_qty }}</td>
+        <td>{{ item.current_qty }}</td>
+        <td>{{ item.expiration_date.strftime('%b %d, %Y') if item.expiration_date else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8">No items recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+</body>
+</html>

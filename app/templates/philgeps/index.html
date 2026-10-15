@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="flex flex-col gap-space-lg">
+    <div class="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+        <div>
+            <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight">PhilGEPS Live Portal Search</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant">Direct procurement notice checks from the government bidding portal.</p>
+        </div>
+
+        <a href="https://www.philgeps.gov.ph" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-space-xs rounded-lg border border-outline bg-surface-container-lowest px-space-lg py-2.5 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container hover:text-on-surface">
+            <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+            <span>Official Website</span>
+        </a>
+    </div>
+
+    <div class="overflow-hidden rounded-xl border border-outline/20 bg-surface-container-lowest shadow-sm">
+        <div class="flex flex-col gap-space-md bg-inverse-surface px-space-lg py-3 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-space-sm">
+                <span class="material-symbols-outlined text-[20px] text-primary-fixed">search</span>
+                <span class="font-headline-sm text-headline-sm text-inverse-on-surface">Search Live Notices</span>
+            </div>
+
+            <form action="{{ url_for('philgeps.search') }}" method="GET" class="w-full md:max-w-[360px]">
+                <div class="flex items-center gap-space-xs rounded-lg bg-surface-container-lowest p-1 shadow-inner">
+                    <div class="flex-1">
+                        <input type="text" name="keyword" value="{{ keyword }}" class="w-full rounded-md border-0 bg-transparent px-space-md py-2.5 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:outline-none" placeholder="Enter keyword (e.g. Medical, Laptop)..." required>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center rounded-md bg-primary p-2.5 text-on-primary transition-colors hover:bg-primary-container" aria-label="Search notices">
+                        <span class="material-symbols-outlined text-[18px]">search</span>
+                    </button>
+                    {% if keyword %}
+                    <a href="{{ url_for('philgeps.search') }}" class="inline-flex items-center justify-center rounded-md border border-outline/30 bg-surface-container px-2.5 py-2.5 text-on-surface transition-colors hover:bg-surface-container-high" aria-label="Reset search">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full border-separate border-spacing-0 text-left">
+                <thead class="bg-surface-container">
+                    <tr>
+                        <th class="px-space-md py-3 font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Project Title</th>
+                        <th class="px-space-md py-3 font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Pre-Bid / Closing Date</th>
+                        <th class="px-space-md py-3 text-right font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Portal Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if opportunities %}
+                        {% for opp in opportunities %}
+                        <tr class="border-t border-outline/15 hover:bg-surface-container/80">
+                            <td class="px-space-md py-3 font-headline-sm text-headline-sm text-on-surface">{{ opp.title }}</td>
+                            <td class="px-space-md py-3">
+                                <span class="inline-flex items-center rounded-full border border-outline/30 bg-surface-container-low px-2.5 py-1 font-body-md text-body-md text-on-surface">{{ opp.pre_bid_date }}</span>
+                            </td>
+                            <td class="px-space-md py-3 text-right">
+                                <a href="{{ opp.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-space-xs rounded-lg border border-primary text-primary px-space-md py-2 font-label-md text-label-md transition-colors hover:bg-primary hover:text-on-primary">
+                                    <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                                    <span>View Live</span>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="px-space-lg py-space-xl text-center text-on-surface-variant">
+                                <div class="flex flex-col items-center gap-space-sm">
+                                    <span class="material-symbols-outlined text-[42px] text-on-surface-variant/70">search</span>
+                                    <p class="font-body-md text-body-md">
+                                        {% if keyword %}
+                                        No live notices found for "{{ keyword }}".
+                                        {% else %}
+                                        Type a keyword above to pull active government notices straight from PhilGEPS.
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
