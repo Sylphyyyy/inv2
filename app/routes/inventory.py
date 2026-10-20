@@ -1,7 +1,7 @@
 import json
 from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from app.models import Procurement, Item, AvailableStock
+from app.models import Procurement, Item, AvailableStock, DeliveryChecklist
 from app import db
 
 inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
@@ -412,6 +412,26 @@ def view_procurement(procurement_id):
         warning_cutoff=warning_cutoff,
         expiring_items=expiring_items,
     )
+
+
+@inventory_bp.route('/items/<int:item_id>/delivery-checklist', methods=['POST'])
+def update_delivery_checklist(item_id):
+    item = Item.query.get_or_404(item_id)
+    checklist = item.delivery_checklist
+    if checklist is None:
+        checklist = DeliveryChecklist(item=item)
+        db.session.add(checklist)
+
+    checklist.quantity_matches = True if 'quantity_matches' in request.form else None
+    checklist.specifications_match = True if 'specifications_match' in request.form else None
+    checklist.condition_acceptable = True if 'condition_acceptable' in request.form else None
+    checklist.expiry_acceptable = True if 'expiry_acceptable' in request.form else None
+    checklist.documents_complete = True if 'documents_complete' in request.form else None
+
+    db.session.commit()
+    flash(f"Delivery checklist saved for '{item.name}'.", "success")
+    return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
+
 
 @inventory_bp.route('/print/<int:procurement_id>')
 def print_procurement(procurement_id):

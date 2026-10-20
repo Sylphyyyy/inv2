@@ -1,5 +1,5 @@
 import os
-from flask import Flask, redirect, url_for, session
+from flask import Flask, redirect, url_for, session, send_from_directory, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import inspect, text
 from werkzeug.security import generate_password_hash
@@ -31,9 +31,22 @@ def create_app():
             return redirect(url_for('auth.login'))
         return redirect(url_for('inventory.index'))
 
+    # Serve manifest.json with proper MIME type
+    @app.route('/manifest.json')
+    def manifest():
+        return send_from_directory('static', 'manifest.json', mimetype='application/manifest+json')
+
+    # Serve sw.js with root scope header for PWA offline caching
+    @app.route('/sw.js')
+    def service_worker():
+        response = make_response(send_from_directory('static', 'sw.js', mimetype='application/javascript'))
+        response.headers['Service-Worker-Allowed'] = '/'
+        return response
+
     with app.app_context():
         from app.models import Procurement, Item, AvailableStock, User
         db.create_all()
+
         item_columns = {column['name'] for column in inspect(db.engine).get_columns('item')}
         if 'expiration_date' not in item_columns:
             with db.engine.begin() as connection:
@@ -45,10 +58,8 @@ def create_app():
             if admin_password:
                 password_hash = generate_password_hash(admin_password)
             else:
-                # No ADMIN_PASSWORD set: generate a random one and print to logs so
-                # the operator can retrieve it; the app remains secure by default.
                 import secrets
-                password_hash = generate_password_hash(secrets.token_urllength(16))
+                password_hash = generate_password_hash(secrets.token_urlsafe(16))
                 app.logger.warning(
                     "ADMIN_PASSWORD not set in environment. "
                     "A random admin password was generated; set ADMIN_PASSWORD to control it."
