@@ -345,7 +345,8 @@
           <span class="font-bold text-primary tabular-nums">{{ p.progress }}%</span>
         </div>
         <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
-          <div class="h-full {% if p.progress == 100 %}bg-primary{% else %}bg-secondary-container{% endif %} rounded-full transition-all duration-500" style="width: {{ p.progress }}%;"></div>
+          {% set progress_class = 'bg-primary' if p.progress == 100 else 'bg-secondary-container' %}
+          <div class="h-full {{ progress_class }} rounded-full transition-all duration-500" style="width: {{ p.progress }}%;"></div>
         </div>
       </div>
 
