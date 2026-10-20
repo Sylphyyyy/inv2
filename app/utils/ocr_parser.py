@@ -81,7 +81,7 @@ def parse_bid_document(file_path):
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-3.5-flash-lite',
                 contents=[
                     types.Part.from_bytes(data=file_data, mime_type=mime_type),
                     prompt
