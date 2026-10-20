@@ -1,12 +1,14 @@
 import os
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
 from app.utils.ocr_parser import parse_bid_document
 
 bid_upload_bp = Blueprint('bid_upload', __name__, url_prefix='/bids')
 
-UPLOAD_FOLDER = 'app/static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def get_upload_folder():
+    return current_app.config.get('UPLOAD_FOLDER', 'app/static/uploads')
+
 
 @bid_upload_bp.route('/scan', methods=['GET', 'POST'])
 def scan_bid():
@@ -14,12 +16,12 @@ def scan_bid():
 
     if request.method == 'POST':
         print("--- POST REQUEST RECEIVED ---")
-        
+
         if 'file' not in request.files:
             print("ERROR: No 'file' found in request.files")
             flash('No file part uploaded.', 'danger')
             return redirect(request.url)
-        
+
         file = request.files['file']
         print(f"File uploaded: {file.filename}")
 
@@ -29,8 +31,10 @@ def scan_bid():
             return redirect(request.url)
 
         if file:
+            upload_folder = get_upload_folder()
+            os.makedirs(upload_folder, exist_ok=True)
             filename = secure_filename(file.filename)
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file_path = os.path.join(upload_folder, filename)
             file.save(file_path)
             print(f"File saved successfully to: {file_path}")
 

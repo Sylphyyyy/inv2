@@ -1,0 +1,20 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+
+# Database and instance data
+instance/
+*.db
+*.db-journal
+
+# Uploads (user-generated content)
+app/static/uploads/
