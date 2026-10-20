@@ -25,22 +25,7 @@ class Item(db.Model):
     target_qty = db.Column(db.Integer, default=1)
     current_qty = db.Column(db.Integer, default=0)
     expiration_date = db.Column(db.Date, nullable=True)
-    delivery_checklist = db.relationship(
-        'DeliveryChecklist',
-        backref='item',
-        uselist=False,
-        cascade='all, delete-orphan',
-    )
-
-
-class DeliveryChecklist(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey('item.id'), nullable=False, unique=True)
-    quantity_matches = db.Column(db.Boolean, nullable=True)
-    specifications_match = db.Column(db.Boolean, nullable=True)
-    condition_acceptable = db.Column(db.Boolean, nullable=True)
-    expiry_acceptable = db.Column(db.Boolean, nullable=True)
-    documents_complete = db.Column(db.Boolean, nullable=True)
+    delivery_checked = db.Column(db.Boolean, default=False, nullable=False)
 
 class AvailableStock(db.Model):
     id = db.Column(db.Integer, primary_key=True)

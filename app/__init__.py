@@ -51,6 +51,9 @@ def create_app():
         if 'expiration_date' not in item_columns:
             with db.engine.begin() as connection:
                 connection.execute(text('ALTER TABLE item ADD COLUMN expiration_date DATE'))
+        if 'delivery_checked' not in item_columns:
+            with db.engine.begin() as connection:
+                connection.execute(text('ALTER TABLE item ADD COLUMN delivery_checked BOOLEAN NOT NULL DEFAULT FALSE'))
 
         # Create default admin if none exists
         if not User.query.filter_by(username='admin').first():

@@ -211,45 +211,18 @@
                                 </form>
                             </div>
                         </td>
-                    </tr>
-                    <tr class="bg-surface-container-low">
-                        <td colspan="9" class="border-b border-outline/30 px-space-md py-space-md">
-                            <form action="{{ url_for('inventory.update_delivery_checklist', item_id=item.id) }}" method="POST">
-                                <fieldset>
-                                    <legend class="font-headline-sm text-headline-sm text-on-surface">Delivery inspection — {{ item.name }}</legend>
-                                    <p class="mt-1 font-body-sm text-body-sm text-on-surface-variant">Check each condition that passes inspection, then save the checklist.</p>
-                                    <div class="mt-space-sm grid grid-cols-1 gap-space-sm sm:grid-cols-2 lg:grid-cols-3">
-                                        <label class="flex items-start gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest p-space-sm font-body-md text-body-md text-on-surface">
-                                            <input type="checkbox" name="quantity_matches" {% if item.delivery_checklist and item.delivery_checklist.quantity_matches %}checked{% endif %} class="mt-1 h-4 w-4 accent-primary">
-                                            <span>Delivered quantity matches the order</span>
-                                        </label>
-                                        <label class="flex items-start gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest p-space-sm font-body-md text-body-md text-on-surface">
-                                            <input type="checkbox" name="specifications_match" {% if item.delivery_checklist and item.delivery_checklist.specifications_match %}checked{% endif %} class="mt-1 h-4 w-4 accent-primary">
-                                            <span>Item, model, and specifications are correct</span>
-                                        </label>
-                                        <label class="flex items-start gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest p-space-sm font-body-md text-body-md text-on-surface">
-                                            <input type="checkbox" name="condition_acceptable" {% if item.delivery_checklist and item.delivery_checklist.condition_acceptable %}checked{% endif %} class="mt-1 h-4 w-4 accent-primary">
-                                            <span>Goods are new, undamaged, and in acceptable condition</span>
-                                        </label>
-                                        <label class="flex items-start gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest p-space-sm font-body-md text-body-md text-on-surface">
-                                            <input type="checkbox" name="expiry_acceptable" {% if item.delivery_checklist and item.delivery_checklist.expiry_acceptable %}checked{% endif %} class="mt-1 h-4 w-4 accent-primary">
-                                            <span>Expiry date or shelf life is acceptable, if applicable</span>
-                                        </label>
-                                        <label class="flex items-start gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest p-space-sm font-body-md text-body-md text-on-surface">
-                                            <input type="checkbox" name="documents_complete" {% if item.delivery_checklist and item.delivery_checklist.documents_complete %}checked{% endif %} class="mt-1 h-4 w-4 accent-primary">
-                                            <span>Required delivery documents or certificates are complete</span>
-                                        </label>
-                                    </div>
-                                    <div class="mt-space-sm flex justify-end">
-                                        <button type="submit" class="inline-flex items-center gap-space-xs rounded-lg bg-primary-container px-space-md py-2 font-label-md text-label-md text-on-primary transition-colors hover:bg-primary">
-                                            <span class="material-symbols-outlined text-[18px]">save</span>
-                                            <span>Save Delivery Checklist</span>
-                                        </button>
-                                    </div>
-                                </fieldset>
-                            </form>
-                        </td>
-                    </tr>
+    </tr>
+    <tr class="bg-surface-container-low">
+        <td colspan="9" class="border-b border-outline/30 px-space-md py-space-md">
+            <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST">
+                <input type="hidden" name="delivery_checked" value="off">
+                <label class="flex items-center gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface cursor-pointer">
+                    <input type="checkbox" name="delivery_checked" value="on" {% if item.delivery_checked %}checked{% endif %} class="h-4 w-4 cursor-pointer accent-primary">
+                    <span>Delivery received and inspected</span>
+                </label>
+            </form>
+        </td>
+    </tr>
                     {% else %}
                     <tr>
                         <td colspan="9" class="px-space-lg py-space-xl text-center font-body-md text-body-md text-on-surface-variant">No items added to this procurement folder yet.</td>
