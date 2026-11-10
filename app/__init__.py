@@ -55,8 +55,18 @@ def create_app():
             with db.engine.begin() as connection:
                 connection.execute(text('ALTER TABLE item ADD COLUMN delivery_checked BOOLEAN NOT NULL DEFAULT FALSE'))
 
+        user_columns = {column['name'] for column in inspect(db.engine).get_columns('user')}
+        with db.engine.begin() as connection:
+            if 'email' not in user_columns:
+                connection.execute(text('ALTER TABLE "user" ADD COLUMN email VARCHAR(320)'))
+            if 'reset_token_hash' not in user_columns:
+                connection.execute(text('ALTER TABLE "user" ADD COLUMN reset_token_hash VARCHAR(64)'))
+            if 'reset_token_expires_at' not in user_columns:
+                connection.execute(text('ALTER TABLE "user" ADD COLUMN reset_token_expires_at BIGINT'))
+
         # Create default admin if none exists
-        if not User.query.filter_by(username='admin').first():
+        admin = User.query.filter_by(username='admin').first()
+        if not admin:
             admin_password = os.environ.get('ADMIN_PASSWORD')
             if admin_password:
                 password_hash = generate_password_hash(admin_password)
@@ -70,6 +80,13 @@ def create_app():
 
             admin = User(username='admin', password_hash=password_hash)
             db.session.add(admin)
-            db.session.commit()
+
+        if app.config['ADMIN_EMAIL'] and not admin.email:
+            admin.email = app.config['ADMIN_EMAIL']
+        elif app.config['ADMIN_EMAIL'] and admin.email != app.config['ADMIN_EMAIL']:
+            app.logger.warning(
+                'ADMIN_EMAIL differs from the existing admin recovery address; leaving it unchanged.'
+            )
+        db.session.commit()
 
     return app

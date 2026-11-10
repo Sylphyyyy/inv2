@@ -42,3 +42,6 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(320), nullable=True)
+    reset_token_hash = db.Column(db.String(64), nullable=True)
+    reset_token_expires_at = db.Column(db.BigInteger, nullable=True)

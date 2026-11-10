@@ -53,7 +53,7 @@
           <div class="flex flex-col">
             <div class="flex items-center justify-between mb-1">
               <label class="font-label-md text-xs font-semibold text-on-surface" for="password">Password</label>
-              <a class="font-label-sm text-[11px] font-bold text-primary-container hover:underline hover:text-primary transition-colors" href="#reset-request">Forgot Password?</a>
+              <a class="font-label-sm text-[11px] font-bold text-primary-container hover:underline hover:text-primary transition-colors" href="{{ url_for('auth.forgot_password') }}">Forgot Password?</a>
             </div>
             <div class="relative flex items-center">
               <span class="material-symbols-outlined absolute left-3 text-tertiary text-[20px] pointer-events-none">lock</span>
