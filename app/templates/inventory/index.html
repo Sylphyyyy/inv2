@@ -176,10 +176,10 @@
               {% if allocatable_items %}
               <form action="{{ url_for('inventory.allocate_available_stock', source_type=stock.source_type, source_id=stock.source_id) }}" method="POST" class="flex items-center gap-space-sm">
                 <label class="sr-only" for="destination{{ stock.source_type }}{{ stock.source_id }}">Procurement item to receive {{ stock.name }}</label>
-                <select id="destination{{ stock.source_type }}{{ stock.source_id }}" name="destination_item_id" required class="flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select id="destination{{ stock.source_type }}{{ stock.source_id }}" name="destination_item_id" required class="max-w-xs truncate rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="">Choose procurement item</option>
                   {% for destination in allocatable_items %}
-                  <option value="{{ destination.item.id }}">{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})</option>
+                  <option value="{{ destination.item.id }}" title="{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})">{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})</option>
                   {% endfor %}
                 </select>
                 <label class="sr-only" for="allocateQty{{ stock.source_type }}{{ stock.source_id }}">Quantity to allocate</label>

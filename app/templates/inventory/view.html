@@ -170,7 +170,7 @@
                             <code class="rounded bg-surface-container px-2 py-1 font-label-sm text-label-sm text-on-surface">{{ item.code }}</code>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 font-headline-sm text-headline-sm text-on-surface">{{ item.name }}</td>
-                        <td class="max-w-lg border-b border-outline/20 px-space-md py-3 font-body-md text-body-md text-on-surface-variant">{{ item.category }}</td>
+                        <td class="max-w-xs truncate border-b border-outline/20 px-space-md py-3 font-body-md text-body-md text-on-surface-variant" title="{{ item.category }}">{{ item.category }}</td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center font-body-md text-body-md text-on-surface">{{ item.unit }}</td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-right">
                             <span class="font-headline-sm text-headline-sm text-primary">₱{{ "{:,.2f}".format(item.price|float) }}</span>
