@@ -67,12 +67,14 @@ def parse_bid_document(file_path):
     # The prompt can now be much shorter because Pydantic handles the formatting!
     prompt = (
         "You are an expert procurement assistant reading a PhilGEPS / Bid Notice document.\n"
-        "Extract BOTH the general procurement details (metadata) and all line items.\n\n"
+        "Extract BOTH the general procurement details (metadata) and ALL line items from the detailed itemized list.\n\n"
         "CRITICAL RULES:\n"
         "1. Extract quantity ONLY from the designated 'Quantity' column. Convert comma numbers like '27,000' into plain integers (27000).\n"
         "2. Ensure the ABC (Approved Budget) is a clean float number without currency symbols.\n"
         "3. For each item, distinguish a per-unit price from that item's extended line total. If a per-unit price is shown, use it and mark price_type as 'unit'. If only that item's line total is shown, use it as price and mark price_type as 'line_total'. If neither is shown, use null and mark price_type as 'missing'; never substitute the procurement-wide ABC.\n"
-        "4. Do not include address lines or venue details in the item descriptions."
+        "4. Do not include address lines or venue details in the item descriptions.\n"
+        "5. IMPORTANT: Parse EVERY line in the detailed numbered item list (e.g. 'LIST OF MEDICINE SUPPLIES: 1. AMOXICILLIN ... 100 boxes'). Do NOT just extract the single summary row from the bottom 'All Items' table — that table usually contains one generic total row and misses every individual medicine. Return every numbered item as a separate entry in the items array.\n"
+        "6. For each item: item_name = the medicine/product name, quantity = the numeric quantity, unit = the UOM (e.g. 'box', 'bottles', 'pcs', 'Lot'), description = any extra details, price = unit price if shown else line total else null.\n"
     )
 
     max_retries = 3
