@@ -18,13 +18,13 @@ RESET_REQUEST_COOLDOWN_SECONDS = 60
 
 def _send_password_reset_email(recipient, reset_url):
     config = current_app.config
-    if not all((config['MAIL_SERVER'], config['MAIL_DEFAULT_SENDER'], config['PUBLIC_BASE_URL'])):
+    if not config['MAIL_SERVER'] or not config['MAIL_DEFAULT_SENDER']:
         current_app.logger.warning(
             'SMTP is not configured; password reset link not emailed to %s. '
             'Reset link: %s',
             recipient, reset_url,
         )
-        return
+        return False
     if bool(config['MAIL_USERNAME']) != bool(config['MAIL_PASSWORD']):
         raise RuntimeError('MAIL_USERNAME and MAIL_PASSWORD must both be configured or both omitted.')
 
@@ -50,6 +50,7 @@ def _send_password_reset_email(recipient, reset_url):
             if config['MAIL_USERNAME']:
                 smtp.login(config['MAIL_USERNAME'], config['MAIL_PASSWORD'])
             smtp.send_message(message)
+    return True
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -88,13 +89,18 @@ def forgot_password():
                 db.session.commit()
 
                 reset_path = url_for('auth.reset_password', token=token)
-                reset_url = f"{current_app.config['PUBLIC_BASE_URL']}{reset_path}"
+                reset_url = request.url_root.rstrip('/') + reset_path
                 try:
-                    _send_password_reset_email(user.email, reset_url)
+                    sent = _send_password_reset_email(user.email, reset_url)
                 except (OSError, smtplib.SMTPException, RuntimeError):
                     current_app.logger.exception('Unable to send password reset email.')
-                    flash('Unable to send a reset email right now. Please try again later.', 'danger')
-                    return render_template('auth/forgot_password.html'), 503
+                    sent = False
+                if sent:
+                    flash('If an account uses that email, a password reset link has been sent.', 'success')
+                    return redirect(url_for('auth.login'))
+                # Email could not be sent: show the link directly (no SMTP configured)
+                flash('Reset link (copy and open it):', 'warning')
+                return render_template('auth/forgot_password.html', reset_url=reset_url)
 
         flash('If an account uses that email, a password reset link has been sent.', 'success')
         return redirect(url_for('auth.login'))
