@@ -182,7 +182,10 @@
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center">
                             {% if item.current_qty >= item.target_qty %}
-                                <span class="inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">{{ item.current_qty }} / {{ item.target_qty }}</span>
+                                <span class="inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">
+                                    {{ item.current_qty }} / {{ item.target_qty }}
+                                    <span class="ml-2 font-label-sm opacity-80">Delivered</span>
+                                </span>
                             {% else %}
                                 <span class="inline-flex rounded-full bg-secondary-fixed px-3 py-1 font-label-sm text-label-sm text-on-secondary-fixed">{{ item.current_qty }} / {{ item.target_qty }}</span>
                             {% endif %}
@@ -211,18 +214,7 @@
                                 </form>
                             </div>
                         </td>
-    </tr>
-    <tr class="bg-surface-container-low">
-        <td colspan="9" class="border-b border-outline/30 px-space-md py-space-md">
-            <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST">
-                <input type="hidden" name="delivery_checked" value="off">
-                <label class="flex items-center gap-space-sm rounded-lg border border-outline/30 bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface cursor-pointer">
-                    <input type="checkbox" name="delivery_checked" value="on" {% if item.delivery_checked %}checked{% endif %} class="h-4 w-4 cursor-pointer accent-primary">
-                    <span>Delivery received and inspected</span>
-                </label>
-            </form>
-        </td>
-    </tr>
+                    </tr>
                     {% else %}
                     <tr>
                         <td colspan="9" class="px-space-lg py-space-xl text-center font-body-md text-body-md text-on-surface-variant">No items added to this procurement folder yet.</td>
