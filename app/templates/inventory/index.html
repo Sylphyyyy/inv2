@@ -113,21 +113,33 @@
             {% if stock.unit %}<span class="ml-1 font-body-sm text-body-sm text-on-surface-variant">({{ stock.unit }})</span>{% endif %}
           </td>
           <td class="border-b border-outline/20 px-space-md py-3 text-center">
-            <span class="inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">{{ stock.quantity }}</span>
+            <!-- View mode -->
+            <span id="view-qty-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">{{ stock.quantity }}</span>
+            <!-- Edit mode -->
+            <div id="edit-qty-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden">
+              <input type="number" name="quantity" min="0" value="{{ stock.quantity }}" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
           </td>
           <td class="border-b border-outline/20 px-space-md py-3 font-body-md text-body-md">
-            {% if stock.expiration_date %}
-              <span class="{% if stock.expiration_date <= warning_cutoff %}text-error{% else %}text-on-surface{% endif %}">{{ stock.expiration_date.strftime('%b %d, %Y') }}</span>
-              {% if stock.expiration_date < today %}
-                <span class="block font-label-sm text-label-sm text-error">Expired — remove or discard</span>
-              {% elif stock.expiration_date == today %}
-                <span class="block font-label-sm text-label-sm text-error">Expires today</span>
-              {% elif stock.expiration_date <= warning_cutoff %}
-                <span class="block font-label-sm text-label-sm text-error">Expiring within 30 days</span>
+            <!-- View mode -->
+            <span id="view-exp-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode {% if stock.expiration_date %}{% if stock.expiration_date <= warning_cutoff %}text-error{% else %}text-on-surface{% endif %}{% else %}text-on-surface-variant{% endif %}">
+              {% if stock.expiration_date %}{{ stock.expiration_date.strftime('%b %d, %Y') }}{% else %}Not set{% endif %}
+            </span>
+            <div id="view-exp-status-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode block mt-1">
+              {% if stock.expiration_date %}
+                {% if stock.expiration_date < today %}
+                  <span class="font-label-sm text-label-sm text-error">Expired — remove or discard</span>
+                {% elif stock.expiration_date == today %}
+                  <span class="font-label-sm text-label-sm text-error">Expires today</span>
+                {% elif stock.expiration_date <= warning_cutoff %}
+                  <span class="font-label-sm text-label-sm text-error">Expiring within 30 days</span>
+                {% endif %}
               {% endif %}
-            {% else %}
-              <span class="text-on-surface-variant">Not set</span>
-            {% endif %}
+            </div>
+            <!-- Edit mode -->
+            <div id="edit-exp-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden">
+              <input type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="min-w-0 flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
           </td>
           <td class="border-b border-outline/20 px-space-md py-3 font-body-md text-body-md text-on-surface">
             {% if stock.procurement %}
@@ -138,9 +150,10 @@
           </td>
           <td class="border-b border-outline/20 px-space-md py-3">
             <div class="flex flex-col gap-space-sm">
-              <div class="flex items-end gap-space-xs">
+              <!-- View mode actions -->
+              <div id="view-actions-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode flex items-end gap-space-xs">
                 {% if stock.source_type == 'manual' %}
-                <button type="button" onclick="document.getElementById('editAvailableStock{{ stock.source_id }}').showModal()" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                <button type="button" onclick="toggleEdit('{{ stock.source_type }}{{ stock.source_id }}', true)" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
                   <span class="material-symbols-outlined text-[18px]">edit</span>
                   <span>Edit Details</span>
                 </button>
@@ -163,15 +176,21 @@
                 </form>
                 {% endif %}
               </div>
-              <form action="{% if stock.source_type == 'surplus' %}{{ url_for('inventory.update_surplus', item_id=stock.source_id) }}{% else %}{{ url_for('inventory.update_available_stock', stock_id=stock.source_id) }}{% endif %}" method="POST" class="flex items-center gap-space-sm">
-                <label class="sr-only" for="stockQty{{ stock.source_type }}{{ stock.source_id }}">Available quantity of {{ stock.name }}</label>
-                <input id="stockQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="{% if stock.source_type == 'surplus' %}surplus_qty{% else %}quantity{% endif %}" min="0" value="{{ stock.quantity }}" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <label class="sr-only" for="stockExpiration{{ stock.source_type }}{{ stock.source_id }}">Expiration date for {{ stock.name }}</label>
-                <input id="stockExpiration{{ stock.source_type }}{{ stock.source_id }}" type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="min-w-0 flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+              <!-- Edit mode actions -->
+              <div id="edit-actions-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden flex items-end gap-space-xs">
+                <button type="button" onclick="saveRow('{{ stock.source_type }}{{ stock.source_id }}')" class="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-sm text-label-sm text-on-primary transition-colors hover:bg-primary">
                   <span class="material-symbols-outlined text-[18px]">save</span>
                   <span>Save</span>
                 </button>
+                <button type="button" onclick="toggleEdit('{{ stock.source_type }}{{ stock.source_id }}', false)" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                  <span class="material-symbols-outlined text-[18px]">cancel</span>
+                  <span>Cancel</span>
+                </button>
+              </div>
+              <!-- Update form (hidden, submitted by Save) -->
+              <form id="update-form-{{ stock.source_type }}{{ stock.source_id }}" action="{% if stock.source_type == 'surplus' %}{{ url_for('inventory.update_surplus', item_id=stock.source_id) }}{% else %}{{ url_for('inventory.update_available_stock', stock_id=stock.source_id) }}{% endif %}" method="POST" class="hidden">
+                <input type="number" name="{% if stock.source_type == 'surplus' %}surplus_qty{% else %}quantity{% endif %}" min="0" value="{{ stock.quantity }}">
+                <input type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}">
               </form>
               {% if allocatable_items %}
               <form action="{{ url_for('inventory.allocate_available_stock', source_type=stock.source_type, source_id=stock.source_id) }}" method="POST" class="flex items-center gap-space-sm">
@@ -482,7 +501,18 @@
 
         e.target.value = formatted.trim();
       });
-    }
+    });
   });
+
+  // Inline edit for available stock rows
+  function toggleEdit(id, editing) {
+    const idSel = id;
+    document.querySelectorAll(`#view-qty-${idSel}, #view-exp-${idSel}, #view-exp-status-${idSel}, #view-actions-${idSel}`).forEach(el => el.classList.toggle('hidden', editing));
+    document.querySelectorAll(`#edit-qty-${idSel}, #edit-exp-${idSel}, #edit-actions-${idSel}`).forEach(el => el.classList.toggle('hidden', !editing));
+  }
+
+  function saveRow(id) {
+    document.getElementById(`update-form-${id}`).submit();
+  }
 </script>
 {% endblock %}
