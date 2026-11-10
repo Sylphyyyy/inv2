@@ -137,18 +137,8 @@
             {% endif %}
           </td>
           <td class="border-b border-outline/20 px-space-md py-3">
-            <div class="flex min-w-64 flex-col gap-space-sm">
-              <form action="{% if stock.source_type == 'surplus' %}{{ url_for('inventory.update_surplus', item_id=stock.source_id) }}{% else %}{{ url_for('inventory.update_available_stock', stock_id=stock.source_id) }}{% endif %}" method="POST" class="flex flex-wrap justify-end gap-space-xs">
-                <label class="sr-only" for="stockQty{{ stock.source_type }}{{ stock.source_id }}">Available quantity of {{ stock.name }}</label>
-                <input id="stockQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="{% if stock.source_type == 'surplus' %}surplus_qty{% else %}quantity{% endif %}" min="0" value="{{ stock.quantity }}" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <label class="sr-only" for="stockExpiration{{ stock.source_type }}{{ stock.source_id }}">Expiration date for {{ stock.name }}</label>
-                <input id="stockExpiration{{ stock.source_type }}{{ stock.source_id }}" type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="min-w-0 flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
-                  <span class="material-symbols-outlined text-[18px]">save</span>
-                  <span>Save</span>
-                </button>
-              </form>
-              <div class="flex justify-end gap-space-xs">
+            <div class="flex flex-col gap-space-sm">
+              <div class="flex items-end gap-space-xs">
                 {% if stock.source_type == 'manual' %}
                 <button type="button" onclick="document.getElementById('editAvailableStock{{ stock.source_id }}').showModal()" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
                   <span class="material-symbols-outlined text-[18px]">edit</span>
@@ -173,23 +163,31 @@
                 </form>
                 {% endif %}
               </div>
+              <form action="{% if stock.source_type == 'surplus' %}{{ url_for('inventory.update_surplus', item_id=stock.source_id) }}{% else %}{{ url_for('inventory.update_available_stock', stock_id=stock.source_id) }}{% endif %}" method="POST" class="flex items-center gap-space-sm">
+                <label class="sr-only" for="stockQty{{ stock.source_type }}{{ stock.source_id }}">Available quantity of {{ stock.name }}</label>
+                <input id="stockQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="{% if stock.source_type == 'surplus' %}surplus_qty{% else %}quantity{% endif %}" min="0" value="{{ stock.quantity }}" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <label class="sr-only" for="stockExpiration{{ stock.source_type }}{{ stock.source_id }}">Expiration date for {{ stock.name }}</label>
+                <input id="stockExpiration{{ stock.source_type }}{{ stock.source_id }}" type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="min-w-0 flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                  <span class="material-symbols-outlined text-[18px]">save</span>
+                  <span>Save</span>
+                </button>
+              </form>
               {% if allocatable_items %}
-              <form action="{{ url_for('inventory.allocate_available_stock', source_type=stock.source_type, source_id=stock.source_id) }}" method="POST" class="flex flex-col gap-space-xs">
+              <form action="{{ url_for('inventory.allocate_available_stock', source_type=stock.source_type, source_id=stock.source_id) }}" method="POST" class="flex items-center gap-space-sm">
                 <label class="sr-only" for="destination{{ stock.source_type }}{{ stock.source_id }}">Procurement item to receive {{ stock.name }}</label>
-                <select id="destination{{ stock.source_type }}{{ stock.source_id }}" name="destination_item_id" required class="w-full rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <select id="destination{{ stock.source_type }}{{ stock.source_id }}" name="destination_item_id" required class="flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                   <option value="">Choose procurement item</option>
                   {% for destination in allocatable_items %}
                   <option value="{{ destination.item.id }}">{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})</option>
                   {% endfor %}
                 </select>
-                <div class="flex justify-end gap-space-xs">
-                  <label class="sr-only" for="allocateQty{{ stock.source_type }}{{ stock.source_id }}">Quantity to allocate</label>
-                  <input id="allocateQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="quantity" min="1" max="{{ stock.quantity }}" value="1" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-                  <button type="submit" class="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-sm text-label-sm text-on-primary transition-colors hover:bg-primary">
-                    <span class="material-symbols-outlined text-[18px]">move_down</span>
-                    <span>Allocate</span>
-                  </button>
-                </div>
+                <label class="sr-only" for="allocateQty{{ stock.source_type }}{{ stock.source_id }}">Quantity to allocate</label>
+                <input id="allocateQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="quantity" min="1" max="{{ stock.quantity }}" value="1" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <button type="submit" class="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-sm text-label-sm text-on-primary transition-colors hover:bg-primary">
+                  <span class="material-symbols-outlined text-[18px]">move_down</span>
+                  <span>Allocate</span>
+                </button>
               </form>
               {% else %}
               <span class="text-right font-body-sm text-body-sm text-on-surface-variant">No unfilled procurement items</span>
@@ -271,11 +269,11 @@
 <div class="flex items-center justify-between border-b-2 border-surface-container-high pt-space-sm">
   <div class="flex items-center gap-space-lg">
     <a href="{{ url_for('inventory.index', tab='active') }}" class="relative pb-3 flex items-center gap-2 font-headline-sm text-headline-sm transition-colors {% if current_tab == 'active' %}font-bold text-primary{% else %}font-semibold text-tertiary hover:text-on-surface{% endif %}">
-      <span>Active Bids</span>
+      <span>For Deliveries</span>
       <span class="absolute bottom-[-2px] left-0 w-full h-[3px] rounded-t {% if current_tab == 'active' %}bg-primary{% else %}hidden{% endif %}"></span>
     </a>
     <a href="{{ url_for('inventory.index', tab='archive') }}" class="relative pb-3 flex items-center gap-2 font-headline-sm text-headline-sm transition-colors {% if current_tab == 'archive' %}font-bold text-primary{% else %}font-semibold text-tertiary hover:text-on-surface{% endif %}">
-      <span>Archive List (Lost Bids)</span>
+      <span>Archive List</span>
       <span class="absolute bottom-[-2px] left-0 w-full h-[3px] rounded-t {% if current_tab == 'archive' %}bg-primary{% else %}hidden{% endif %}"></span>
     </a>
   </div>
