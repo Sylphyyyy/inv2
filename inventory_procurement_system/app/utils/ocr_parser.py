@@ -156,7 +156,7 @@ def parse_with_google_genai(file_path: str) -> dict:
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.5-flash',
                 contents=[
                     types.Part.from_bytes(data=file_data, mime_type=mime_type),
                     prompt
