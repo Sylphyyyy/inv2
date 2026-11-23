@@ -24,89 +24,137 @@ def clean_int(value: str) -> Optional[int]:
         return None
 
 
+_UNITS = (
+    r'box|boxes|pcs|bottle|bottles|lot|lots|roll|rolls|pack|packs|'
+    r'piece|pieces|unit|units|set|sets|bundle|bundles|ream|reams|'
+    r'jar|jars|tube|tubes|can|cans|ampoule|ampoules|vial|vials|'
+    r'sachet|sachets|tab|tabs|bottle|bottles'
+)
+
+
 def extract_metadata(text: str) -> Dict[str, Any]:
     """Extract procurement metadata using regex patterns."""
     metadata = {
         'procurement_title': 'N/A',
+        'reference_number': 'N/A',
+        'procuring_entity': 'N/A',
+        'solicitation_number': 'N/A',
+        'trade_agreement': 'N/A',
+        'procurement_mode': 'N/A',
+        'classification': 'N/A',
+        'category': 'N/A',
         'abc': None,
+        'delivery_period': 'N/A',
+        'client_agency': 'N/A',
+        'contact_person': 'N/A',
+        'date_published': 'N/A',
+        'last_updated': 'N/A',
+        'closing_date': 'N/A',
+        'status': 'N/A',
+        'associated_components': 'N/A',
+        'bid_supplements': 'N/A',
+        'document_request_list': 'N/A',
         'pre_bid_conference_date': 'N/A',
         'place_of_bidding': 'N/A',
         'municipality': 'N/A',
         'agency_requested': 'N/A',
     }
 
-    # Title: look for common PhilGEPS title patterns
+    def _field(patterns: str, flags=re.IGNORECASE) -> Optional[str]:
+        if isinstance(patterns, str):
+            patterns = [patterns]
+        for pat in patterns:
+            m = re.search(pat, text, flags)
+            if m:
+                return m.group(1).strip()
+        return None
+
+    # Title: prefer explicit "Title:" label; avoid matching the bare header
     title_patterns = [
         r'Project Title[:\s]+(.+?)(?=\n|$)',
         r'Name of Project[:\s]+(.+?)(?=\n|$)',
-        r'Invitation to Bid[:\s]+(.+?)(?=\n|$)',
-        r'Procurement of[:\s]+(.+?)(?=\n|$)',
         r'Title[:\s]+(.+?)(?=\n|$)',
+        r'Invitation to Bid:\s+(.+?)(?=\n|$)',
+        r'Procurement of[:\s]+(.+?)(?=\n|$)',
     ]
-    for pattern in title_patterns:
-        m = re.search(pattern, text, re.IGNORECASE | re.MULTILINE)
-        if m:
-            metadata['procurement_title'] = m.group(1).strip()
-            break
+    metadata['procurement_title'] = _field(title_patterns) or 'N/A'
 
-    # ABC: Approved Budget for the Contract
+    # Reference / solicitation numbers
+    metadata['reference_number'] = _field([
+        r'Reference Number[:\s]+([\w\s\-/]+)',
+        r'RFQ Number[:\s]+([\w\s\-/]+)',
+        r'ITB Number[:\s]+([\w\s\-/]+)',
+    ]) or 'N/A'
+    metadata['solicitation_number'] = _field([
+        r'Solicitation Number[:\s]+([\w\s\-/]+)',
+        r'PR Number[:\s]+([\w\s\-/]+)',
+    ]) or 'N/A'
+
+    # Procuring entity / agency
+    metadata['procuring_entity'] = _field([
+        r'Procuring Entity[:\s]+(.+?)(?=\n|$)',
+        r'Government Agency[:\s]+(.+?)(?=\n|$)',
+        r'Agency[:\s]+(.+?)(?=\n|$)',
+    ]) or 'N/A'
+    metadata['agency_requested'] = metadata['procuring_entity'] if metadata['procuring_entity'] != 'N/A' else 'N/A'
+
+    # Classification / category / mode / trade agreement
+    metadata['classification'] = _field([r'Classification[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+    metadata['category'] = _field([r'Category[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+    metadata['procurement_mode'] = _field([r'Procurement Mode[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+    metadata['trade_agreement'] = _field([r'Trade Agreement[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+
+    # ABC: Approved Budget for the Contract (e.g. "₱ 1,257,880.00")
     abc_patterns = [
         r'Approved Budget for the Contract[:\s]+₱?\s*([\d,]+\.?\d*)',
         r'ABC[:\s]+₱?\s*([\d,]+\.?\d*)',
         r'Total ABC[:\s]+₱?\s*([\d,]+\.?\d*)',
         r'Approved Budget[:\s]+₱?\s*([\d,]+\.?\d*)',
     ]
-    for pattern in abc_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            metadata['abc'] = clean_currency(m.group(1))
-            break
+    abc_val = _field(abc_patterns)
+    metadata['abc'] = clean_currency(abc_val) if abc_val else None
 
-    # Pre-bid conference date/time
+    # Delivery period
+    metadata['delivery_period'] = _field([r'Delivery Period[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+    metadata['client_agency'] = _field([r'Client Agency[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+
+    # Contact person (multiline block up to the next field)
+    contact = _field([r'Contact Person:\s*(.+?)(?=\n\s*Date Published)'], re.IGNORECASE | re.DOTALL)
+    metadata['contact_person'] = re.sub(r'\s+', ' ', contact).strip() if contact else 'N/A'
+
+    # Dates: DD/MM/YYYY and DD/MM/YYYY HH:MM AM/PM
+    date_only = r'\d{1,2}/\d{1,2}/\d{4}'
+    date_time = r'\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}\s*(?:AM|PM)?'
+    metadata['date_published'] = _field([rf'Date Published[:\s]+({date_only})']) or 'N/A'
+    metadata['last_updated'] = _field([rf'Last Updated[/\s]*Time[:\s]+({date_time})']) or 'N/A'
+    metadata['closing_date'] = _field([rf'Closing Date[/\s]*Time[:\s]+({date_time})']) or 'N/A'
+
+    # Status and component/supplement counts
+    metadata['status'] = _field([r'Status[:\s]+(.+?)(?=\n|$)']) or 'N/A'
+    metadata['associated_components'] = _field([r'Associated Components[:\s]*(\d+)']) or 'N/A'
+    metadata['bid_supplements'] = _field([r'Bid Supplements[:\s]*(\d+)']) or 'N/A'
+    metadata['document_request_list'] = _field([r'Document Request List[:\s]*(\d+)']) or 'N/A'
+
+    # Pre-bid conference
     prebid_patterns = [
         r'Pre-bid Conference[:\s]+(.+?)(?=\n|$)',
         r'Pre-bid[:\s]+(.+?)(?=\n|$)',
-        r'(\d{1,2}/\d{1,2}/\d{4}\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)',
+        rf'({date_time})',
     ]
-    for pattern in prebid_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            metadata['pre_bid_conference_date'] = m.group(1).strip()
-            break
+    metadata['pre_bid_conference_date'] = _field(prebid_patterns) or 'N/A'
 
-    # Place of bidding
+    # Place / venue / municipality
     place_patterns = [
         r'Place of Bidding[:\s]+(.+?)(?=\n|$)',
         r'Venue[:\s]+(.+?)(?=\n|$)',
     ]
-    for pattern in place_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            metadata['place_of_bidding'] = m.group(1).strip()
-            break
-
-    # Municipality
+    metadata['place_of_bidding'] = _field(place_patterns) or 'N/A'
     mun_patterns = [
         r'Municipality[:\s]+(.+?)(?=\n|$)',
-        r'City[:\s]+(.+?)(?=\n|$)',
+        r'City of\s+(.+?)(?=\n|$)',
+        r'City\s*[:\-]\s*(.+?)(?=\n|$)',
     ]
-    for pattern in mun_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            metadata['municipality'] = m.group(1).strip()
-            break
-
-    # Agency / Procuring entity
-    agency_patterns = [
-        r'Government Agency[:\s]+(.+?)(?=\n|$)',
-        r'Procuring Entity[:\s]+(.+?)(?=\n|$)',
-        r'Agency[:\s]+(.+?)(?=\n|$)',
-    ]
-    for pattern in agency_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            metadata['agency_requested'] = m.group(1).strip()
-            break
+    metadata['municipality'] = _field(mun_patterns) or 'N/A'
 
     return metadata
 
@@ -114,19 +162,20 @@ def extract_metadata(text: str) -> Dict[str, Any]:
 def extract_items(text: str) -> List[Dict[str, Any]]:
     """Extract line items from numbered lists in bid documents.
 
-    Matches patterns like:
-      1. AMOXICILLIN 500mg 100 'box' ... 100 boxes ... ₱50.00
+    Handles formats like:
+      1. AMOXICILLIN 500mg 100 'box' .... 100 boxes                (no price, image 1)
+      1. AMOXICILLIN 500mg 100 'box' .... 100 boxes .... ₱50.00   (with price)
+      23. METFORMIN HCl 500 MG 100's tab .... 100 boxes .... ₱100 boxes
+
+    The real quantity/unit is the LAST quantity+unit pair on the line
+    (earlier "100 'box'"-style tokens are pack-size description). Price is
+    optional since it may be cut off at the page edge.
     """
     items = []
 
-    # Pattern: number. name ... quantity unit ... price
     item_pattern = re.compile(
-        r'^\s*(\d+)\.\s+(.+?)\s+(\d+)\s+'
-        r'(box|boxes|pcs|bottles|bottle|lot|Lot|roll|rolls|pack|packs|'
-        r'piece|pieces|unit|units|set|sets|bundle|bundles|ream|reams|'
-        r'jar|jars|tube|tubes|can|cans|ampoule|ampoules|vial|vials|'
-        r'sachet|sachets|bottle|bottles)\b'
-        r'.*?₱?\s*([\d,]+\.?\d*)',
+        r'^\s*(\d+)\.\s+(.+?)\s+(\d+)\s+(' + _UNITS + r')\b'
+        r'(?:\s+₱?\s*([\d,]+\.?\d*)(?:\s+(?:' + _UNITS + r'))?\s*$)?',
         re.IGNORECASE | re.MULTILINE,
     )
 
@@ -135,7 +184,7 @@ def extract_items(text: str) -> List[Dict[str, Any]]:
         name_part = m.group(2).strip()
         quantity = clean_int(m.group(3))
         unit = m.group(4).strip()
-        price = clean_currency(m.group(5))
+        price = clean_currency(m.group(5)) if m.group(5) else None
 
         items.append({
             'item_name': name_part,
