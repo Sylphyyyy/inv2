@@ -1,7 +1,6 @@
 import os
 import json
 import time
-from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional
 
@@ -67,18 +66,8 @@ def extract_text_from_file(file_path: str) -> str:
         print("[ERROR] Unsupported file format.")
         return ''
 
-def parse_bid_document(file_path: str) -> dict:
-    client = OpenAI(
-        base_url=os.environ.get('FREE_LLM_API_URL', 'http://localhost:3001/v1'),
-        api_key=os.environ.get('FREE_LLM_API_KEY', ''),
-    )
-
-    document_text = extract_text_from_file(file_path)
-    if not document_text.strip():
-        print("[ERROR] No text extracted from document.")
-        return {}
-
-    # The prompt can now be much shorter because Pydantic handles the formatting!
+def build_prompt(document_text: str) -> str:
+    """Build the extraction prompt with the Pydantic schema embedded."""
     prompt = (
         "You are an expert procurement assistant reading a PhilGEPS / Bid Notice document.\n"
         "Extract BOTH the general procurement details (metadata) and ALL line items from the detailed itemized list.\n\n"
@@ -93,7 +82,23 @@ def parse_bid_document(file_path: str) -> dict:
         "6. For each item: item_name = the medicine/product name, quantity = the numeric quantity, unit = the UOM (e.g. 'box', 'bottles', 'pcs', 'Lot'), description = any extra details, price = unit price if shown else line total else null.\n"
         f"\n\nDOCUMENT TEXT:\n{document_text}"
     )
+    return prompt
 
+def parse_with_freellmapi(file_path: str) -> dict:
+    """Parse using FreeLLMAPI local OpenAI-compatible endpoint."""
+    from openai import OpenAI
+
+    client = OpenAI(
+        base_url=os.environ.get('FREE_LLM_API_URL', 'http://localhost:3001/v1'),
+        api_key=os.environ.get('FREE_LLM_API_KEY', ''),
+    )
+
+    document_text = extract_text_from_file(file_path)
+    if not document_text.strip():
+        print("[ERROR] No text extracted from document.")
+        return {}
+
+    prompt = build_prompt(document_text)
     max_retries = 3
     delay = 2
 
@@ -109,16 +114,82 @@ def parse_bid_document(file_path: str) -> dict:
                 temperature=0.0,
             )
 
-            # Normalize item line totals to unit prices; do not estimate from the procurement ABC.
             parsed_data = json.loads(response.choices[0].message.content)
             parsed_data['items'] = normalize_item_prices(parsed_data.get('items', []))
             return parsed_data
 
         except Exception as e:
-            print(f"[WARNING] Attempt {attempt + 1} failed due to traffic/error: {e}")
+            print(f"[WARNING] FreeLLMAPI attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
                 time.sleep(delay)
-                delay *= 2  # Double the wait time for the next retry
+                delay *= 2
             else:
-                print("[ERROR] Max retries reached. LLM extraction failed.")
+                print("[ERROR] FreeLLMAPI max retries reached.")
                 return {}
+
+def parse_with_google_genai(file_path: str) -> dict:
+    """Parse using Google GenAI (fallback for production/Vercel)."""
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client()
+
+    file_lower = file_path.lower()
+    if file_lower.endswith('.pdf'):
+        mime_type = 'application/pdf'
+    elif file_lower.endswith('.png'):
+        mime_type = 'image/png'
+    elif file_lower.endswith(('.jpg', '.jpeg')):
+        mime_type = 'image/jpeg'
+    else:
+        print("[ERROR] Unsupported file format.")
+        return {}
+
+    with open(file_path, 'rb') as f:
+        file_data = f.read()
+
+    prompt = build_prompt(extract_text_from_file(file_path))
+
+    max_retries = 3
+    delay = 2
+
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    types.Part.from_bytes(data=file_data, mime_type=mime_type),
+                    prompt
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=ProcurementData,
+                    temperature=0.0
+                )
+            )
+
+            parsed_data = json.loads(response.text)
+            parsed_data['items'] = normalize_item_prices(parsed_data.get('items', []))
+            return parsed_data
+
+        except Exception as e:
+            print(f"[WARNING] Google GenAI attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                print("[ERROR] Google GenAI max retries reached.")
+                return {}
+
+def parse_bid_document(file_path: str) -> dict:
+    """Parse a bid document using FreeLLMAPI first, falling back to Google GenAI."""
+    free_llm_url = os.environ.get('FREE_LLM_API_URL', '')
+    free_llm_key = os.environ.get('FREE_LLM_API_KEY', '')
+
+    if free_llm_url and free_llm_key:
+        result = parse_with_freellmapi(file_path)
+        if result:
+            return result
+        print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
+
+    return parse_with_google_genai(file_path)
