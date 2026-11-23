@@ -367,7 +367,7 @@ def add_procurement():
 
         if not title:
             flash("Procurement title cannot be empty.", "danger")
-            return render_template('inventory/add.html')
+            return redirect(url_for('inventory.index'))
 
         abc_cleaned = None
         if abc:
@@ -388,9 +388,9 @@ def add_procurement():
         except Exception as e:
             db.session.rollback()
             flash(f"Failed to create procurement folder: {str(e)}", "danger")
-            return render_template('inventory/add.html')
+            return redirect(url_for('inventory.index'))
 
-    return render_template('inventory/add.html')
+    return redirect(url_for('inventory.index'))
 
 @inventory_bp.route('/<int:procurement_id>/edit', methods=['POST'])
 def edit_procurement(procurement_id):
