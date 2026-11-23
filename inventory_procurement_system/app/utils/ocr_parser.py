@@ -84,12 +84,32 @@ def get_cached(file_path: str) -> dict | None:
         pass
     return None
 
-def extract_text_from_file(file_path: str) -> str:
-    """Extract text from PDF or image using existing OCR dependencies.
+_EASYOCR_READER = None
 
-    PDFs: embedded text via pdfplumber; falls back to OCR (pdf2image + pytesseract)
-    for scanned/image-based PDFs that have no embedded text layer.
-    Images: pytesseract (png, jpg, jpeg, tiff, tif, bmp, webp).
+
+def _get_easyocr_reader():
+    """Lazy-load and cache the EasyOCR reader (expensive to initialize)."""
+    global _EASYOCR_READER
+    if _EASYOCR_READER is None:
+        import easyocr
+        _EASYOCR_READER = easyocr.Reader(['en'], gpu=False)
+    return _EASYOCR_READER
+
+
+def _easyocr_image_to_text(image) -> str:
+    """Run EasyOCR on a PIL Image and return joined text."""
+    import numpy as np
+    reader = _get_easyocr_reader()
+    result = reader.readtext(np.array(image))
+    return ' '.join([item[1] for item in result])
+
+
+def extract_text_from_file(file_path: str) -> str:
+    """Extract text from PDF or image using EasyOCR (no system binaries needed).
+
+    PDFs: embedded text via pdfplumber; falls back to OCR via PyMuPDF page
+    rendering + EasyOCR for scanned/image-based PDFs.
+    Images: EasyOCR directly (png, jpg, jpeg, tiff, tif, bmp, webp).
     """
     file_lower = file_path.lower()
 
@@ -103,28 +123,32 @@ def extract_text_from_file(file_path: str) -> str:
         if embedded:
             return embedded
 
-        # Scanned / image-based PDF: OCR each page via pdf2image + pytesseract.
+        # Scanned / image-based PDF: render pages via PyMuPDF (fitz), then EasyOCR.
         try:
-            from pdf2image import convert_from_path
-            import pytesseract
+            import fitz  # PyMuPDF
             from PIL import Image
+            import io
         except ImportError:
-            print("[ERROR] pdf2image or pytesseract not installed for scanned-PDF OCR.")
+            print("[ERROR] PyMuPDF (fitz) not installed for scanned-PDF rendering. "
+                  "Install with: pip install pymupdf")
             return ''
         try:
-            pages = convert_from_path(file_path)
+            doc = fitz.open(file_path)
             ocr_parts = []
-            for page in pages:
-                ocr_parts.append(pytesseract.image_to_string(page) or '')
+            for page in doc:
+                pix = page.get_pixmap()
+                img_bytes = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_bytes))
+                ocr_parts.append(_easyocr_image_to_text(img))
             return '\n'.join(ocr_parts)
         except Exception as e:
-            print(f"[ERROR] Scanned-PDF OCR failed (is Tesseract/Poppler installed?): {e}")
+            print(f"[ERROR] Scanned-PDF OCR failed: {e}")
             return ''
 
     elif file_lower.endswith(('.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp', '.webp')):
-        import pytesseract
-        from PIL import Image
-        return pytesseract.image_to_string(Image.open(file_path))
+        reader = _get_easyocr_reader()
+        result = reader.readtext(file_path)
+        return ' '.join([item[1] for item in result])
 
     else:
         print("[ERROR] Unsupported file format.")
