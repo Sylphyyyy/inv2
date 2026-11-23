@@ -182,7 +182,7 @@ def parse_with_google_genai(file_path: str) -> dict:
                 return {}
 
 def parse_bid_document(file_path: str) -> dict:
-    """Parse a bid document using FreeLLMAPI first, falling back to Google GenAI."""
+    """Parse a bid document using FreeLLMAPI first, then Google GenAI, then regex fallback."""
     free_llm_url = os.environ.get('FREE_LLM_API_URL', '')
     free_llm_key = os.environ.get('FREE_LLM_API_KEY', '')
 
@@ -192,4 +192,16 @@ def parse_bid_document(file_path: str) -> dict:
             return result
         print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
 
-    return parse_with_google_genai(file_path)
+    result = parse_with_google_genai(file_path)
+    if result:
+        return result
+    print("[INFO] Google GenAI failed, falling back to regex-only parsing.")
+
+    # Final fallback: regex rules (no API, no limits)
+    from app.utils.regex_parser import parse_bid_document_regex
+    result = parse_bid_document_regex(file_path)
+    if result:
+        print("[INFO] Regex parsing succeeded.")
+        return result
+
+    return {}
