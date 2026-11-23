@@ -64,6 +64,23 @@ def create_app():
             if 'reset_token_expires_at' not in user_columns:
                 connection.execute(text('ALTER TABLE "user" ADD COLUMN reset_token_expires_at BIGINT'))
 
+        proc_columns = {column['name'] for column in inspect(db.engine).get_columns('procurement')}
+        with db.engine.begin() as connection:
+            if 'abc' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN abc VARCHAR(100)'))
+            if 'pre_bid_date' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN pre_bid_date VARCHAR(100)'))
+            if 'place_of_bidding' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN place_of_bidding VARCHAR(255)'))
+            if 'municipality' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN municipality VARCHAR(100)'))
+            if 'agency' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN agency VARCHAR(150)'))
+            if 'status' not in proc_columns:
+                connection.execute(text("ALTER TABLE procurement ADD COLUMN status VARCHAR(20) DEFAULT 'Ongoing'"))
+            if 'created_at' not in proc_columns:
+                connection.execute(text('ALTER TABLE procurement ADD COLUMN created_at DATETIME'))
+
         # Create default admin if none exists
         admin = User.query.filter_by(username='admin').first()
         if not admin:

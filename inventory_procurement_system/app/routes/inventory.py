@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from app.models import Procurement, Item, AvailableStock
@@ -370,7 +371,6 @@ def add_procurement():
 
         abc_cleaned = None
         if abc:
-            import re
             abc_cleaned = re.sub(r'[^\d\.]', '', abc)
             if not abc_cleaned:
                 abc_cleaned = None
