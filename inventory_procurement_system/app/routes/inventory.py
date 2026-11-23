@@ -357,25 +357,40 @@ def send_to_inventory():
 @inventory_bp.route('/add_procurement', methods=['GET', 'POST'])
 def add_procurement():
     if request.method == 'POST':
-        title = request.form.get('title')
-        abc = request.form.get('abc')
-        pre_bid_date = request.form.get('pre_bid_date')
-        place_of_bidding = request.form.get('place_of_bidding')
-        municipality = request.form.get('municipality')
-        agency = request.form.get('agency')
+        title = request.form.get('title', '').strip()
+        abc = request.form.get('abc', '').strip()
+        pre_bid_date = request.form.get('pre_bid_date', '').strip() or None
+        place_of_bidding = request.form.get('place_of_bidding', '').strip() or None
+        municipality = request.form.get('municipality', '').strip() or None
+        agency = request.form.get('agency', '').strip() or None
+
+        if not title:
+            flash("Procurement title cannot be empty.", "danger")
+            return render_template('inventory/add.html')
+
+        abc_cleaned = None
+        if abc:
+            import re
+            abc_cleaned = re.sub(r'[^\d\.]', '', abc)
+            if not abc_cleaned:
+                abc_cleaned = None
 
         new_proc = Procurement(
-            title=title, abc=abc, pre_bid_date=pre_bid_date,
+            title=title, abc=abc_cleaned, pre_bid_date=pre_bid_date,
             place_of_bidding=place_of_bidding, municipality=municipality,
             agency=agency, status='Ongoing'
         )
         db.session.add(new_proc)
-        db.session.commit()
-        
-        flash('New Procurement folder created successfully.', 'success')
-        return redirect(url_for('inventory.index'))
-    
-    return redirect(url_for('inventory.index'))
+        try:
+            db.session.commit()
+            flash('New Procurement folder created successfully.', 'success')
+            return redirect(url_for('inventory.index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Failed to create procurement folder: {str(e)}", "danger")
+            return render_template('inventory/add.html')
+
+    return render_template('inventory/add.html')
 
 @inventory_bp.route('/<int:procurement_id>/edit', methods=['POST'])
 def edit_procurement(procurement_id):

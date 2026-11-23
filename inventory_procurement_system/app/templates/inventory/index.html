@@ -10,10 +10,10 @@
     <p class="font-body-md text-body-md text-on-surface-variant"></p>
   </div>
   <div class="flex items-center gap-space-sm flex-shrink-0">
-   <a href="{{ url_for('inventory.add_procurement') }}" class="flex items-center gap-space-xs px-space-lg py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-md">
-  <span class="material-symbols-outlined text-[20px]">add</span>
-  <span>New Procurement</span>
-</a>
+    <a href="{{ url_for('inventory.add_procurement') }}" class="flex items-center gap-space-xs px-space-lg py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-md">
+      <span class="material-symbols-outlined text-[20px]">add</span>
+      <span>New Procurement</span>
+    </a>
   </div>
 </div>
 
@@ -397,70 +397,7 @@
   {% endfor %}
 </div>
 
-<!-- Add Procurement Modal Component -->
-<div id="addProcurementModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm p-4">
-  <div class="bg-surface-container-lowest rounded-xl shadow-xl border-0 overflow-hidden w-full max-w-2xl">
-    <form action="{{ url_for('inventory.add_procurement') }}" method="POST">
-      <div class="bg-inverse-surface text-inverse-on-surface px-space-lg py-space-md flex items-center justify-between">
-        <h5 class="font-headline-md text-headline-md font-bold flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary-fixed">create_new_folder</span>
-          <span>Create Procurement Folder</span>
-        </h5>
-        <button type="button" onclick="closeProcurementModal()" class="text-inverse-on-surface hover:text-error-container transition-colors">
-          <span class="material-symbols-outlined text-[24px]">close</span>
-        </button>
-      </div>
-      
-      <div class="p-space-lg space-y-4">
-        <div>
-          <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Procurement Title</label>
-          <input type="text" name="title" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" required>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Approved Budget (ABC)</label>
-            <input type="text" name="abc" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. ₱1,500,000.00">
-          </div>
-          <div>
-            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Pre-Bid Conference</label>
-            <input type="text" name="pre_bid_date" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="DD/MM/YYYY HH:MM AM/PM">
-          </div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Place of Bidding</label>
-            <input type="text" name="place_of_bidding" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary">
-          </div>
-          <div>
-            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Municipality</label>
-            <input type="text" name="municipality" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary">
-          </div>
-        </div>
-        <div>
-          <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Government Agency / Office</label>
-          <input type="text" name="agency" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Department of Education (DepEd)">
-        </div>
-      </div>
-
-      <div class="bg-surface-container-low px-space-lg py-space-md border-t border-surface-container-high flex justify-end gap-space-sm">
-        <button type="button" onclick="closeProcurementModal()" class="px-4 py-2 rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors">Cancel</button>
-        <button type="submit" class="px-4 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-all">Create Folder</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <script>
-  // Modal controls
-  function openProcurementModal() {
-    document.getElementById('addProcurementModal').classList.remove('hidden');
-  }
-
-  function closeProcurementModal() {
-    document.getElementById('addProcurementModal').classList.add('hidden');
-  }
-
-  // Input Formatters
   document.addEventListener('DOMContentLoaded', function() {
     // ABC Currency Formatter
     const abcInput = document.querySelector('input[name="abc"]');
@@ -501,7 +438,7 @@
 
         e.target.value = formatted.trim();
       });
-    });
+    };
   });
 
   // Inline edit for available stock rows
