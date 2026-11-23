@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import hashlib
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional
 
@@ -46,71 +45,8 @@ def normalize_item_prices(items):
             item['price_type'] = 'missing'
     return items
 
-
-def score_item(item: dict) -> float:
-    """Return a 0.0-1.0 confidence score for a parsed line item."""
-    score = 1.0
-    if item.get('price') is None:
-        score -= 0.4
-    if item.get('price_type') == 'missing':
-        score -= 0.3
-    if not item.get('item_name'):
-        score -= 0.3
-    return round(max(score, 0.0), 2)
-
-
-CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache', 'parses')
-
-
-def save_cache(file_path: str, data: dict) -> None:
-    """Cache a parse result keyed by file content hash. Silently skips if read-only."""
-    h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
-    p = os.path.join(CACHE_DIR, h + '.json')
-    try:
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        json.dump(data, open(p, 'w'))
-    except OSError:
-        print("[WARNING] Cache directory not writable; skipping cache.")
-
-
-def get_cached(file_path: str) -> dict | None:
-    """Return cached parse result for a file, or None if not cached/unreadable."""
-    h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
-    p = os.path.join(CACHE_DIR, h + '.json')
-    try:
-        if os.path.exists(p):
-            return json.load(open(p))
-    except (OSError, json.JSONDecodeError):
-        pass
-    return None
-
-_EASYOCR_READER = None
-
-
-def _get_easyocr_reader():
-    """Lazy-load and cache the EasyOCR reader (expensive to initialize)."""
-    global _EASYOCR_READER
-    if _EASYOCR_READER is None:
-        import easyocr
-        _EASYOCR_READER = easyocr.Reader(['en'], gpu=False)
-    return _EASYOCR_READER
-
-
-def _easyocr_image_to_text(image) -> str:
-    """Run EasyOCR on a PIL Image and return joined text."""
-    import numpy as np
-    reader = _get_easyocr_reader()
-    result = reader.readtext(np.array(image))
-    return ' '.join([item[1] for item in result])
-
-
 def extract_text_from_file(file_path: str) -> str:
-    """Extract text from PDF or image using EasyOCR (no system binaries needed).
-
-    PDFs: embedded text via pdfplumber; falls back to OCR via PyMuPDF page
-    rendering + EasyOCR for scanned/image-based PDFs.
-    Images: EasyOCR directly (png, jpg, jpeg, tiff, tif, bmp, webp).
-    """
+    """Extract text from PDF or image using existing OCR dependencies."""
     file_lower = file_path.lower()
 
     if file_lower.endswith('.pdf'):
@@ -119,36 +55,12 @@ def extract_text_from_file(file_path: str) -> str:
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
                 text_parts.append(page.extract_text() or '')
-        embedded = '\n'.join(text_parts).strip()
-        if embedded:
-            return embedded
+        return '\n'.join(text_parts)
 
-        # Scanned / image-based PDF: render pages via PyMuPDF (fitz), then EasyOCR.
-        try:
-            import fitz  # PyMuPDF
-            from PIL import Image
-            import io
-        except ImportError:
-            print("[ERROR] PyMuPDF (fitz) not installed for scanned-PDF rendering. "
-                  "Install with: pip install pymupdf")
-            return ''
-        try:
-            doc = fitz.open(file_path)
-            ocr_parts = []
-            for page in doc:
-                pix = page.get_pixmap()
-                img_bytes = pix.tobytes("png")
-                img = Image.open(io.BytesIO(img_bytes))
-                ocr_parts.append(_easyocr_image_to_text(img))
-            return '\n'.join(ocr_parts)
-        except Exception as e:
-            print(f"[ERROR] Scanned-PDF OCR failed: {e}")
-            return ''
-
-    elif file_lower.endswith(('.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp', '.webp')):
-        reader = _get_easyocr_reader()
-        result = reader.readtext(file_path)
-        return ' '.join([item[1] for item in result])
+    elif file_lower.endswith(('.png', '.jpg', '.jpeg')):
+        import pytesseract
+        from PIL import Image
+        return pytesseract.image_to_string(Image.open(file_path))
 
     else:
         print("[ERROR] Unsupported file format.")
@@ -271,42 +183,25 @@ def parse_with_google_genai(file_path: str) -> dict:
 
 def parse_bid_document(file_path: str) -> dict:
     """Parse a bid document using FreeLLMAPI first, then Google GenAI, then regex fallback."""
-    cached = get_cached(file_path)
-    if cached:
-        print("[INFO] Using cached parse result.")
-        return cached
-
     free_llm_url = os.environ.get('FREE_LLM_API_URL', '')
     free_llm_key = os.environ.get('FREE_LLM_API_KEY', '')
-
-    result = None
 
     if free_llm_url and free_llm_key:
         result = parse_with_freellmapi(file_path)
         if result:
-            print("[INFO] FreeLLMAPI parsing succeeded.")
-        else:
-            print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
+            return result
+        print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
 
-    if not result:
-        result = parse_with_google_genai(file_path)
-        if result:
-            print("[INFO] Google GenAI parsing succeeded.")
-        else:
-            print("[INFO] Google GenAI failed, falling back to regex-only parsing.")
+    result = parse_with_google_genai(file_path)
+    if result:
+        return result
+    print("[INFO] Google GenAI failed, falling back to regex-only parsing.")
 
-    if not result:
-        from app.utils.regex_parser import parse_bid_document_regex
-        result = parse_bid_document_regex(file_path)
-        if result:
-            print("[INFO] Regex parsing succeeded.")
+    # Final fallback: regex rules (no API, no limits)
+    from app.utils.regex_parser import parse_bid_document_regex
+    result = parse_bid_document_regex(file_path)
+    if result:
+        print("[INFO] Regex parsing succeeded.")
+        return result
 
-    if not result:
-        return {}
-
-    # Attach confidence scores to each item
-    for item in result.get('items', []):
-        item['confidence'] = score_item(item)
-
-    save_cache(file_path, result)
-    return result
+    return {}

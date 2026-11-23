@@ -11,7 +11,7 @@ openai==1.101.0
 pydantic==2.13.5
 python-dotenv==1.2.3
 
-# Optional: OCR module dependencies (EasyOCR + PyMuPDF, no system binaries needed)
-easyocr==1.7.2
-pymupdf==1.28.2
+# Optional: OCR module dependencies (require system tools: Tesseract-OCR, Poppler)
+pytesseract==0.3.13
 pdfplumber==0.11.10
+pdf2image==1.17.0
