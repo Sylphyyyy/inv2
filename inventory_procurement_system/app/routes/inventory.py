@@ -438,6 +438,15 @@ def toggle_delivery_check(item_id):
     return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
 
 
+@inventory_bp.route('/items/<int:item_id>/purchase-check', methods=['POST'])
+def toggle_purchase_check(item_id):
+    item = Item.query.get_or_404(item_id)
+    item.purchased_checked = 'purchased_checked' in request.form
+    db.session.commit()
+    flash(f"Purchase check updated for '{item.name}'.", "success")
+    return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
+
+
 @inventory_bp.route('/print/<int:procurement_id>')
 def print_procurement(procurement_id):
     procurement = Procurement.query.get_or_404(procurement_id)
@@ -489,6 +498,7 @@ def edit_item(item_id):
     item.current_qty = int(request.form.get('current_qty') or 0)
     item.expiration_date = expiration_date
     item.delivery_checked = 'delivery_checked' in request.form
+    item.purchased_checked = 'purchased_checked' in request.form
     
     db.session.commit()
     flash(f"Item '{item.name}' updated successfully.", "success")

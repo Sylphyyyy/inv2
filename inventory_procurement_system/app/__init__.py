@@ -51,9 +51,12 @@ def create_app():
         if 'expiration_date' not in item_columns:
             with db.engine.begin() as connection:
                 connection.execute(text('ALTER TABLE item ADD COLUMN expiration_date DATE'))
-        if 'delivery_checked' not in item_columns:
-            with db.engine.begin() as connection:
-                connection.execute(text('ALTER TABLE item ADD COLUMN delivery_checked BOOLEAN NOT NULL DEFAULT FALSE'))
+            if 'delivery_checked' not in item_columns:
+                with db.engine.begin() as connection:
+                    connection.execute(text('ALTER TABLE item ADD COLUMN delivery_checked BOOLEAN NOT NULL DEFAULT FALSE'))
+            if 'purchased_checked' not in item_columns:
+                with db.engine.begin() as connection:
+                    connection.execute(text('ALTER TABLE item ADD COLUMN purchased_checked BOOLEAN NOT NULL DEFAULT FALSE'))
 
         user_columns = {column['name'] for column in inspect(db.engine).get_columns('user')}
         with db.engine.begin() as connection:

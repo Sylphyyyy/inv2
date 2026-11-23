@@ -26,6 +26,7 @@ class Item(db.Model):
     current_qty = db.Column(db.Integer, default=0)
     expiration_date = db.Column(db.Date, nullable=True)
     delivery_checked = db.Column(db.Boolean, default=False, nullable=False)
+    purchased_checked = db.Column(db.Boolean, default=False, nullable=False)
 
 class AvailableStock(db.Model):
     id = db.Column(db.Integer, primary_key=True)

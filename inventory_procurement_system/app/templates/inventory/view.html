@@ -159,7 +159,9 @@
                         <th class="border-b border-outline/30 px-space-md py-3 text-right font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Estimated Unit Price</th>
                         <th class="border-b border-outline/30 px-space-md py-3 text-right font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Total Price</th>
                         <th class="border-b border-outline/30 px-space-md py-3 text-center font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Quantity (Current / Target)</th>
+                        <th class="border-b border-outline/30 px-space-md py-3 text-center font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Purchased</th>
                         <th class="border-b border-outline/30 px-space-md py-3 text-center font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Expiration Date</th>
+                        <th class="border-b border-outline/30 px-space-md py-3 text-center font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Delivered</th>
                         <th class="border-b border-outline/30 px-space-md py-3 text-right font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Actions</th>
                     </tr>
                 </thead>
@@ -181,18 +183,17 @@
                             <span class="block font-label-sm text-label-sm text-on-surface-variant">Target qty: {{ item.target_qty }}</span>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center">
-                            <div class="flex flex-col items-center gap-1">
-                                <span class="font-headline-sm text-headline-sm text-on-surface">
-                                    {{ item.current_qty }} / {{ item.target_qty }}
-                                </span>
-                                <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST" class="flex items-center gap-1">
-                                    <input type="hidden" name="delivery_checked" value="1">
-                                    <input type="checkbox" name="delivery_checked" value="1"
-                                           {% if item.delivery_checked %}checked{% endif %}
-                                           onchange="this.form.submit()"
-                                           class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
-                                </form>
-                            </div>
+                            <span class="font-headline-sm text-headline-sm text-on-surface">
+                                {{ item.current_qty }} / {{ item.target_qty }}
+                            </span>
+                        </td>
+                        <td class="border-b border-outline/20 px-space-md py-3 text-center">
+                            <form action="{{ url_for('inventory.toggle_purchase_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
+                                <input type="checkbox" name="purchased_checked" value="1"
+                                       {% if item.purchased_checked %}checked{% endif %}
+                                       onchange="this.form.submit()"
+                                       class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
+                            </form>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center font-body-md text-body-md text-on-surface">
                             {% if item.expiration_date %}
@@ -205,6 +206,14 @@
                             {% else %}
                                 <span class="text-on-surface-variant">Not set</span>
                             {% endif %}
+                        </td>
+                        <td class="border-b border-outline/20 px-space-md py-3 text-center">
+                            <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
+                                <input type="checkbox" name="delivery_checked" value="1"
+                                       {% if item.delivery_checked %}checked{% endif %}
+                                       onchange="this.form.submit()"
+                                       class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
+                            </form>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3">
                             <div class="flex justify-end gap-space-xs">
@@ -221,7 +230,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="9" class="px-space-lg py-space-xl text-center font-body-md text-body-md text-on-surface-variant">No items added to this procurement folder yet.</td>
+                        <td colspan="11" class="px-space-lg py-space-xl text-center font-body-md text-body-md text-on-surface-variant">No items added to this procurement folder yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -266,6 +275,9 @@
             </label>
             <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Delivered
                 <input type="checkbox" name="delivery_checked" value="1" {% if item.delivery_checked %}checked{% endif %} class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
+            </label>
+            <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Purchased
+                <input type="checkbox" name="purchased_checked" value="1" {% if item.purchased_checked %}checked{% endif %} class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
             </label>
             <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Estimated Total (Target Qty × Unit Price)
                 <input type="text" value="₱0.00" readonly data-total-output aria-live="polite" class="w-full rounded-lg border border-primary/40 bg-primary-fixed/40 px-space-md py-2.5 font-headline-sm text-headline-sm text-primary">
