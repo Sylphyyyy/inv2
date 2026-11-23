@@ -189,11 +189,11 @@
                             </span>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center">
-                            <form action="{{ url_for('inventory.toggle_purchase_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
+                            <form id="purchase-form-{{ item.id }}" action="{{ url_for('inventory.toggle_purchase_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
                                 <input type="checkbox" name="purchased_checked" value="1"
                                        {% if item.purchased_checked %}checked{% endif %}
                                        {% if purchased_disabled %}disabled{% endif %}
-                                       onchange="this.form.submit()"
+                                       onchange="toggleCheckState(this, '{{ url_for('inventory.toggle_purchase_check', item_id=item.id) }}')"
                                        class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary
                                               {% if purchased_disabled %}opacity-50 cursor-not-allowed{% endif %}">
                             </form>
@@ -212,11 +212,11 @@
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center">
                             {% set delivered_disabled = (item.current_qty == 0 or item.current_qty < item.target_qty) %}
-                            <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
+                            <form id="delivery-form-{{ item.id }}" action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST" class="flex items-center justify-center gap-1">
                                 <input type="checkbox" name="delivery_checked" value="1"
                                        {% if item.delivery_checked %}checked{% endif %}
                                        {% if delivered_disabled %}disabled{% endif %}
-                                       onchange="this.form.submit()"
+                                       onchange="toggleCheckState(this, '{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}')"
                                        class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary
                                               {% if delivered_disabled %}opacity-50 cursor-not-allowed{% endif %}">
                             </form>
@@ -375,5 +375,23 @@
             updateEstimatedTotal();
         });
     })();
+
+    // Save checkbox state via fetch (no page reload) when checking/unchecking items
+    function toggleCheckState(checkbox, url) {
+        const formData = new FormData();
+        formData.append(checkbox.name, checkbox.checked ? '1' : '');
+
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(response => {
+            if (!response.ok) {
+                checkbox.checked = !checkbox.checked;
+            }
+        }).catch(() => {
+            checkbox.checked = !checkbox.checked;
+        });
+    }
 </script>
 {% endblock %}
