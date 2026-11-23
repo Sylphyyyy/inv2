@@ -46,7 +46,12 @@ def normalize_item_prices(items):
     return items
 
 def extract_text_from_file(file_path: str) -> str:
-    """Extract text from PDF or image using existing OCR dependencies."""
+    """Extract text from PDF or image using existing OCR dependencies.
+
+    PDFs: embedded text via pdfplumber; falls back to OCR (pdf2image + pytesseract)
+    for scanned/image-based PDFs that have no embedded text layer.
+    Images: pytesseract (png, jpg, jpeg, tiff, tif, bmp, webp).
+    """
     file_lower = file_path.lower()
 
     if file_lower.endswith('.pdf'):
@@ -55,9 +60,29 @@ def extract_text_from_file(file_path: str) -> str:
         with pdfplumber.open(file_path) as pdf:
             for page in pdf.pages:
                 text_parts.append(page.extract_text() or '')
-        return '\n'.join(text_parts)
+        embedded = '\n'.join(text_parts).strip()
+        if embedded:
+            return embedded
 
-    elif file_lower.endswith(('.png', '.jpg', '.jpeg')):
+        # Scanned / image-based PDF: OCR each page via pdf2image + pytesseract.
+        try:
+            from pdf2image import convert_from_path
+            import pytesseract
+            from PIL import Image
+        except ImportError:
+            print("[ERROR] pdf2image or pytesseract not installed for scanned-PDF OCR.")
+            return ''
+        try:
+            pages = convert_from_path(file_path)
+            ocr_parts = []
+            for page in pages:
+                ocr_parts.append(pytesseract.image_to_string(page) or '')
+            return '\n'.join(ocr_parts)
+        except Exception as e:
+            print(f"[ERROR] Scanned-PDF OCR failed (is Tesseract/Poppler installed?): {e}")
+            return ''
+
+    elif file_lower.endswith(('.png', '.jpg', '.jpeg', '.tiff', '.tif', '.bmp', '.webp')):
         import pytesseract
         from PIL import Image
         return pytesseract.image_to_string(Image.open(file_path))
