@@ -432,6 +432,9 @@ def view_procurement(procurement_id):
 @inventory_bp.route('/items/<int:item_id>/delivery-check', methods=['POST'])
 def toggle_delivery_check(item_id):
     item = Item.query.get_or_404(item_id)
+    if item.current_qty == 0 or item.current_qty < item.target_qty:
+        flash("Cannot mark as delivered: purchased threshold not met.", "danger")
+        return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
     item.delivery_checked = 'delivery_checked' in request.form
     db.session.commit()
     flash(f"Delivery check updated for '{item.name}'.", "success")
@@ -441,6 +444,9 @@ def toggle_delivery_check(item_id):
 @inventory_bp.route('/items/<int:item_id>/purchase-check', methods=['POST'])
 def toggle_purchase_check(item_id):
     item = Item.query.get_or_404(item_id)
+    if item.current_qty == 0 or item.current_qty < item.target_qty:
+        flash("Cannot mark as purchased: quantity threshold not met.", "danger")
+        return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
     item.purchased_checked = 'purchased_checked' in request.form
     db.session.commit()
     flash(f"Purchase check updated for '{item.name}'.", "success")
@@ -497,9 +503,12 @@ def edit_item(item_id):
     item.target_qty = int(request.form.get('target_qty') or 1)
     item.current_qty = int(request.form.get('current_qty') or 0)
     item.expiration_date = expiration_date
-    item.delivery_checked = 'delivery_checked' in request.form
-    item.purchased_checked = 'purchased_checked' in request.form
-    
+
+    threshold_met = item.current_qty > 0 and item.current_qty >= item.target_qty
+    if threshold_met:
+        item.delivery_checked = 'delivery_checked' in request.form
+        item.purchased_checked = 'purchased_checked' in request.form
+
     db.session.commit()
     flash(f"Item '{item.name}' updated successfully.", "success")
     return redirect(url_for('inventory.view_procurement', procurement_id=item.procurement_id))
