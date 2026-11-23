@@ -375,7 +375,7 @@ def add_procurement():
         flash('New Procurement folder created successfully.', 'success')
         return redirect(url_for('inventory.index'))
     
-    return redirect(url_for('inventory.index'))
+    return render_template('inventory/add.html')
 
 @inventory_bp.route('/<int:procurement_id>/edit', methods=['POST'])
 def edit_procurement(procurement_id):
