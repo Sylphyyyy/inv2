@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import hashlib
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional
 
@@ -44,6 +45,40 @@ def normalize_item_prices(items):
             item['price'] = None
             item['price_type'] = 'missing'
     return items
+
+
+def score_item(item: dict) -> float:
+    """Return a 0.0-1.0 confidence score for a parsed line item."""
+    score = 1.0
+    if item.get('price') is None:
+        score -= 0.4
+    if item.get('price_type') == 'missing':
+        score -= 0.3
+    if not item.get('item_name'):
+        score -= 0.3
+    return round(max(score, 0.0), 2)
+
+
+CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache', 'parses')
+
+
+def get_cached(file_path: str) -> dict | None:
+    """Return cached parse result for a file, or None if not cached."""
+    h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
+    p = os.path.join(CACHE_DIR, h + '.json')
+    if os.path.exists(p):
+        try:
+            return json.load(open(p))
+        except Exception:
+            return None
+    return None
+
+
+def save_cache(file_path: str, data: dict) -> None:
+    """Cache a parse result keyed by file content hash."""
+    h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    json.dump(data, open(os.path.join(CACHE_DIR, h + '.json'), 'w'))
 
 def extract_text_from_file(file_path: str) -> str:
     """Extract text from PDF or image using existing OCR dependencies.
@@ -208,25 +243,42 @@ def parse_with_google_genai(file_path: str) -> dict:
 
 def parse_bid_document(file_path: str) -> dict:
     """Parse a bid document using FreeLLMAPI first, then Google GenAI, then regex fallback."""
+    cached = get_cached(file_path)
+    if cached:
+        print("[INFO] Using cached parse result.")
+        return cached
+
     free_llm_url = os.environ.get('FREE_LLM_API_URL', '')
     free_llm_key = os.environ.get('FREE_LLM_API_KEY', '')
+
+    result = None
 
     if free_llm_url and free_llm_key:
         result = parse_with_freellmapi(file_path)
         if result:
-            return result
-        print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
+            print("[INFO] FreeLLMAPI parsing succeeded.")
+        else:
+            print("[INFO] FreeLLMAPI failed, falling back to Google GenAI.")
 
-    result = parse_with_google_genai(file_path)
-    if result:
-        return result
-    print("[INFO] Google GenAI failed, falling back to regex-only parsing.")
+    if not result:
+        result = parse_with_google_genai(file_path)
+        if result:
+            print("[INFO] Google GenAI parsing succeeded.")
+        else:
+            print("[INFO] Google GenAI failed, falling back to regex-only parsing.")
 
-    # Final fallback: regex rules (no API, no limits)
-    from app.utils.regex_parser import parse_bid_document_regex
-    result = parse_bid_document_regex(file_path)
-    if result:
-        print("[INFO] Regex parsing succeeded.")
-        return result
+    if not result:
+        from app.utils.regex_parser import parse_bid_document_regex
+        result = parse_bid_document_regex(file_path)
+        if result:
+            print("[INFO] Regex parsing succeeded.")
 
-    return {}
+    if not result:
+        return {}
+
+    # Attach confidence scores to each item
+    for item in result.get('items', []):
+        item['confidence'] = score_item(item)
+
+    save_cache(file_path, result)
+    return result
