@@ -1,0 +1,17 @@
+Flask==3.1.3
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.52
+psycopg[binary]>=3.2,<4
+Werkzeug==3.1.8
+gunicorn==26.2.0
+requests==2.34.2
+beautifulsoup4==4.15.0
+google-genai==2.22.0
+openai==1.101.0
+pydantic==2.13.5
+python-dotenv==1.2.3
+
+# Optional: OCR module dependencies (EasyOCR + PyMuPDF, no system binaries needed)
+easyocr==1.7.2
+pymupdf==1.28.2
+pdfplumber==0.11.10
