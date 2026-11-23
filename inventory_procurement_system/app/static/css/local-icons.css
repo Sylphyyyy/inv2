@@ -1,6 +1,8 @@
 /* Locally hosted Material Symbols Outlined font */
 /* Place the WOFF2 font file at: app/static/fonts/material-symbols/MaterialSymbolsOutlined[opsz,wght,FILL,GRAD].woff2 */
 /* Download from: https://fonts.google.com/icons?icon.set=Material+Symbols+Outlined&icon.style=Outlined */
+/* Fallback: loads from Google Fonts until the local WOFF2 file is added */
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 
 @font-face {
   font-family: 'Material Symbols Outlined';
