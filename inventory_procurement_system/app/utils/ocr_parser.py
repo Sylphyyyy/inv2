@@ -62,23 +62,27 @@ def score_item(item: dict) -> float:
 CACHE_DIR = os.path.join(os.path.dirname(__file__), '..', 'cache', 'parses')
 
 
-def get_cached(file_path: str) -> dict | None:
-    """Return cached parse result for a file, or None if not cached."""
+def save_cache(file_path: str, data: dict) -> None:
+    """Cache a parse result keyed by file content hash. Silently skips if read-only."""
     h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
     p = os.path.join(CACHE_DIR, h + '.json')
-    if os.path.exists(p):
-        try:
-            return json.load(open(p))
-        except Exception:
-            return None
-    return None
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        json.dump(data, open(p, 'w'))
+    except OSError:
+        print("[WARNING] Cache directory not writable; skipping cache.")
 
 
-def save_cache(file_path: str, data: dict) -> None:
-    """Cache a parse result keyed by file content hash."""
+def get_cached(file_path: str) -> dict | None:
+    """Return cached parse result for a file, or None if not cached/unreadable."""
     h = hashlib.sha256(open(file_path, 'rb').read()).hexdigest()
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    json.dump(data, open(os.path.join(CACHE_DIR, h + '.json'), 'w'))
+    p = os.path.join(CACHE_DIR, h + '.json')
+    try:
+        if os.path.exists(p):
+            return json.load(open(p))
+    except (OSError, json.JSONDecodeError):
+        pass
+    return None
 
 def extract_text_from_file(file_path: str) -> str:
     """Extract text from PDF or image using existing OCR dependencies.
