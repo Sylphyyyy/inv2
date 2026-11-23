@@ -181,14 +181,18 @@
                             <span class="block font-label-sm text-label-sm text-on-surface-variant">Target qty: {{ item.target_qty }}</span>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center">
-                            {% if item.current_qty >= item.target_qty %}
-                                <span class="inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">
+                            <div class="flex flex-col items-center gap-1">
+                                <span class="font-headline-sm text-headline-sm text-on-surface">
                                     {{ item.current_qty }} / {{ item.target_qty }}
-                                    <span class="ml-2 font-label-sm opacity-80">Delivered</span>
                                 </span>
-                            {% else %}
-                                <span class="inline-flex rounded-full bg-secondary-fixed px-3 py-1 font-label-sm text-label-sm text-on-secondary-fixed">{{ item.current_qty }} / {{ item.target_qty }}</span>
-                            {% endif %}
+                                <form action="{{ url_for('inventory.toggle_delivery_check', item_id=item.id) }}" method="POST" class="flex items-center gap-1">
+                                    <input type="hidden" name="delivery_checked" value="1">
+                                    <input type="checkbox" name="delivery_checked" value="1"
+                                           {% if item.delivery_checked %}checked{% endif %}
+                                           onchange="this.form.submit()"
+                                           class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
+                                </form>
+                            </div>
                         </td>
                         <td class="border-b border-outline/20 px-space-md py-3 text-center font-body-md text-body-md text-on-surface">
                             {% if item.expiration_date %}
@@ -259,6 +263,9 @@
             </label>
             <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Expiration Date
                 <input type="date" name="expiration_date" value="{{ item.expiration_date.isoformat() if item.expiration_date else '' }}" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </label>
+            <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Delivered
+                <input type="checkbox" name="delivery_checked" value="1" {% if item.delivery_checked %}checked{% endif %} class="rounded border border-outline bg-surface-container-lowest text-primary focus:ring-primary">
             </label>
             <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Estimated Total (Target Qty × Unit Price)
                 <input type="text" value="₱0.00" readonly data-total-output aria-live="polite" class="w-full rounded-lg border border-primary/40 bg-primary-fixed/40 px-space-md py-2.5 font-headline-sm text-headline-sm text-primary">

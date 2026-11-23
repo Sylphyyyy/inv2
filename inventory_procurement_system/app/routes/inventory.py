@@ -488,6 +488,7 @@ def edit_item(item_id):
     item.target_qty = int(request.form.get('target_qty') or 1)
     item.current_qty = int(request.form.get('current_qty') or 0)
     item.expiration_date = expiration_date
+    item.delivery_checked = 'delivery_checked' in request.form
     
     db.session.commit()
     flash(f"Item '{item.name}' updated successfully.", "success")
