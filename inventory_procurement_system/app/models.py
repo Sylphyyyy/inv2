@@ -34,6 +34,8 @@ class AvailableStock(db.Model):
     quantity = db.Column(db.Integer, nullable=False, default=0)
     unit = db.Column(db.String(50))
     expiration_date = db.Column(db.Date, nullable=True)
+    source_type = db.Column(db.String(50), nullable=True)
+    source_id = db.Column(db.Integer, nullable=True)
 
 from werkzeug.security import generate_password_hash, check_password_hash
 

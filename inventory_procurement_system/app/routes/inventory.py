@@ -534,7 +534,20 @@ def update_status(procurement_id, status):
 @inventory_bp.route('/delete_procurement/<int:procurement_id>', methods=['POST'])
 def delete_procurement(procurement_id):
     procurement = Procurement.query.get_or_404(procurement_id)
+    # Preserve excess items as independent AvailableStock records before deletion
+    for item in procurement.items:
+        surplus_quantity = item.current_qty - item.target_qty
+        if surplus_quantity > 0:
+            excess_stock = AvailableStock(
+                name=item.name,
+                quantity=surplus_quantity,
+                unit=item.unit,
+                expiration_date=item.expiration_date,
+                source_type='surplus',
+                source_id=item.id,
+            )
+            db.session.add(excess_stock)
     db.session.delete(procurement)
     db.session.commit()
-    flash("Procurement folder permanently deleted.", "info")
+    flash("Procurement folder permanently deleted. Excess stock has been preserved.", "info")
     return redirect(url_for('inventory.index', tab='archive'))

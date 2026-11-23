@@ -84,6 +84,13 @@ def create_app():
             if 'created_at' not in proc_columns:
                 connection.execute(text('ALTER TABLE procurement ADD COLUMN created_at DATETIME'))
 
+        stock_columns = {column['name'] for column in inspect(db.engine).get_columns('available_stock')}
+        with db.engine.begin() as connection:
+            if 'source_type' not in stock_columns:
+                connection.execute(text('ALTER TABLE available_stock ADD COLUMN source_type VARCHAR(50)'))
+            if 'source_id' not in stock_columns:
+                connection.execute(text('ALTER TABLE available_stock ADD COLUMN source_id INTEGER'))
+
         # Create default admin if none exists
         admin = User.query.filter_by(username='admin').first()
         if not admin:
