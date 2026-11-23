@@ -163,28 +163,42 @@ def extract_items(text: str) -> List[Dict[str, Any]]:
     """Extract line items from numbered lists in bid documents.
 
     Handles formats like:
-      1. AMOXICILLIN 500mg 100 'box' .... 100 boxes                (no price, image 1)
+      1. AMOXICILLIN 500mg 100 'box' .... 100 boxes                (no price)
       1. AMOXICILLIN 500mg 100 'box' .... 100 boxes .... ₱50.00   (with price)
       23. METFORMIN HCl 500 MG 100's tab .... 100 boxes .... ₱100 boxes
 
-    The real quantity/unit is the LAST quantity+unit pair on the line
-    (earlier "100 'box'"-style tokens are pack-size description). Price is
-    optional since it may be cut off at the page edge.
+    Each line that starts with "N." is treated as one item. The real
+    quantity/unit is the LAST quantity+unit pair on the line (earlier
+    "100 'box'"-style tokens are pack-size description kept in the name).
+    Price is optional since it may be cut off at the page edge.
     """
     items = []
 
-    item_pattern = re.compile(
-        r'^\s*(\d+)\.\s+(.+?)\s+(\d+)\s+(' + _UNITS + r')\b'
-        r'(?:\s+₱?\s*([\d,]+\.?\d*)(?:\s+(?:' + _UNITS + r'))?\s*$)?',
-        re.IGNORECASE | re.MULTILINE,
-    )
+    for line in text.splitlines():
+        head = re.match(r'^\s*(\d+)\.\s+(.+)$', line, re.IGNORECASE)
+        if not head:
+            continue
+        item_num = head.group(1)
+        rest = head.group(2)
 
-    for m in item_pattern.finditer(text):
-        item_num = m.group(1)
-        name_part = m.group(2).strip()
-        quantity = clean_int(m.group(3))
-        unit = m.group(4).strip()
-        price = clean_currency(m.group(5)) if m.group(5) else None
+        # All quantity+unit pairs on the line; the LAST one is the real UOM.
+        pairs = list(re.finditer(r'(\d+)\s+(' + _UNITS + r')\b', rest, re.IGNORECASE))
+        if not pairs:
+            continue
+        last = pairs[-1]
+        quantity = clean_int(last.group(1))
+        unit = last.group(2).strip()
+
+        # Item name = everything before the last quantity+unit pair.
+        name_part = rest[:last.start()].strip()
+        name_part = re.sub(r'\.+\s*$', '', name_part).strip()
+
+        # Price: a currency-looking number after the last unit pair.
+        price = None
+        tail = rest[last.end():]
+        pm = re.search(r'₱?\s*([\d,]+\.?\d*)', tail)
+        if pm:
+            price = clean_currency(pm.group(1))
 
         items.append({
             'item_name': name_part,
