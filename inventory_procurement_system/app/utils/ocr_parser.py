@@ -1,8 +1,7 @@
 import os
 import json
 import time
-from google import genai
-from google.genai import types
+from openai import OpenAI
 from pydantic import BaseModel, Field
 from typing import List, Literal, Optional
 
@@ -47,27 +46,44 @@ def normalize_item_prices(items):
             item['price_type'] = 'missing'
     return items
 
-def parse_bid_document(file_path):
-    client = genai.Client()
-
+def extract_text_from_file(file_path: str) -> str:
+    """Extract text from PDF or image using existing OCR dependencies."""
     file_lower = file_path.lower()
+
     if file_lower.endswith('.pdf'):
-        mime_type = 'application/pdf'
-    elif file_lower.endswith('.png'):
-        mime_type = 'image/png'
-    elif file_lower.endswith(('.jpg', '.jpeg')):
-        mime_type = 'image/jpeg'
+        import pdfplumber
+        text_parts = []
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                text_parts.append(page.extract_text() or '')
+        return '\n'.join(text_parts)
+
+    elif file_lower.endswith(('.png', '.jpg', '.jpeg')):
+        import pytesseract
+        from PIL import Image
+        return pytesseract.image_to_string(Image.open(file_path))
+
     else:
         print("[ERROR] Unsupported file format.")
-        return {}
+        return ''
 
-    with open(file_path, 'rb') as f:
-        file_data = f.read()
+def parse_bid_document(file_path: str) -> dict:
+    client = OpenAI(
+        base_url=os.environ.get('FREE_LLM_API_URL', 'http://localhost:3001/v1'),
+        api_key=os.environ.get('FREE_LLM_API_KEY', ''),
+    )
+
+    document_text = extract_text_from_file(file_path)
+    if not document_text.strip():
+        print("[ERROR] No text extracted from document.")
+        return {}
 
     # The prompt can now be much shorter because Pydantic handles the formatting!
     prompt = (
         "You are an expert procurement assistant reading a PhilGEPS / Bid Notice document.\n"
         "Extract BOTH the general procurement details (metadata) and ALL line items from the detailed itemized list.\n\n"
+        "Return ONLY valid JSON matching this schema:\n"
+        f"{json.dumps(ProcurementData.model_json_schema(), indent=2)}\n\n"
         "CRITICAL RULES:\n"
         "1. Extract quantity ONLY from the designated 'Quantity' column. Convert comma numbers like '27,000' into plain integers (27000).\n"
         "2. Ensure the ABC (Approved Budget) is a clean float number without currency symbols.\n"
@@ -75,6 +91,7 @@ def parse_bid_document(file_path):
         "4. Do not include address lines or venue details in the item descriptions.\n"
         "5. IMPORTANT: Parse EVERY line in the detailed numbered item list (e.g. 'LIST OF MEDICINE SUPPLIES: 1. AMOXICILLIN ... 100 boxes'). Do NOT just extract the single summary row from the bottom 'All Items' table — that table usually contains one generic total row and misses every individual medicine. Return every numbered item as a separate entry in the items array.\n"
         "6. For each item: item_name = the medicine/product name, quantity = the numeric quantity, unit = the UOM (e.g. 'box', 'bottles', 'pcs', 'Lot'), description = any extra details, price = unit price if shown else line total else null.\n"
+        f"\n\nDOCUMENT TEXT:\n{document_text}"
     )
 
     max_retries = 3
@@ -82,22 +99,18 @@ def parse_bid_document(file_path):
 
     for attempt in range(max_retries):
         try:
-            response = client.models.generate_content(
-                model='gemini-3.5-flash-lite',
-                contents=[
-                    types.Part.from_bytes(data=file_data, mime_type=mime_type),
-                    prompt
+            response = client.chat.completions.create(
+                model=os.environ.get('FREE_LLM_MODEL', 'auto'),
+                messages=[
+                    {"role": "system", "content": "You extract procurement data and return strict JSON only."},
+                    {"role": "user", "content": prompt},
                 ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    # Pass the Pydantic model directly to force perfect JSON generation
-                    response_schema=ProcurementData,
-                    temperature=0.0
-                )
+                response_format={"type": "json_object"},
+                temperature=0.0,
             )
-            
+
             # Normalize item line totals to unit prices; do not estimate from the procurement ABC.
-            parsed_data = json.loads(response.text)
+            parsed_data = json.loads(response.choices[0].message.content)
             parsed_data['items'] = normalize_item_prices(parsed_data.get('items', []))
             return parsed_data
 
@@ -107,5 +120,5 @@ def parse_bid_document(file_path):
                 time.sleep(delay)
                 delay *= 2  # Double the wait time for the next retry
             else:
-                print("[ERROR] Max retries reached. Gemini extraction failed.")
+                print("[ERROR] Max retries reached. LLM extraction failed.")
                 return {}
