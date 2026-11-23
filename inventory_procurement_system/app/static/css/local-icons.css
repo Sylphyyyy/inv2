@@ -1,0 +1,35 @@
+/* Locally hosted Material Symbols Outlined font */
+/* Place the WOFF2 font file at: app/static/fonts/material-symbols/MaterialSymbolsOutlined[opsz,wght,FILL,GRAD].woff2 */
+/* Download from: https://fonts.google.com/icons?icon.set=Material+Symbols+Outlined&icon.style=Outlined */
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  src: url('../fonts/material-symbols/MaterialSymbolsOutlined[opsz,wght,FILL,GRAD].woff2') format('woff2-variations');
+  font-variation-settings: 'opsz' 20, 'wght' 400, 'FILL' 0, 'GRAD' 0;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  font-variation-settings: 'opsz' 24, 'wght' 400, 'FILL' 0, 'GRAD' 0;
+}
+
+/* Inter font - locally hosted fallback */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  src: url('../fonts/inter/Inter[wght].woff2') format('woff2-variations');
+}

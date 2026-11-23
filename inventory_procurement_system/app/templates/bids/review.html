@@ -5,7 +5,7 @@
     <div class="col-md-11">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-dark text-white py-3">
-                <h5 class="mb-0"><i class="bi bi-check-circle me-2"></i>Review Extracted Bid Requirements</h5>
+                <h5 class="mb-0"><span class="material-symbols-outlined me-2">check_circle</span>Review Extracted Bid Requirements</h5>
             </div>
             <div class="card-body p-4">
                 <form action="{{ url_for('bid_upload.save_bids') }}" method="POST">
@@ -51,7 +51,7 @@
                         </table>
                     </div>
                     <button type="submit" class="btn btn-success w-100 mt-3">
-                        <i class="bi bi-save me-1"></i> Confirm and Save to Bid Request
+                        <span class="material-symbols-outlined me-1">save</span> Confirm and Save to Bid Request
                     </button>
                 </form>
             </div>
