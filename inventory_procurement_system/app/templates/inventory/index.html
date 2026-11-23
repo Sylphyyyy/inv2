@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Page Title Scaffolding & Action Hub -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md pt-space-xs">
+  <div class="flex flex-col gap-1">
+    <div class="flex items-center gap-space-sm">
+      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight">Procurement &amp; Inventory Dashboard</h1>
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant"></p>
+  </div>
+  <div class="flex items-center gap-space-sm flex-shrink-0">
+    <button class="flex items-center gap-space-xs px-space-lg py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-md active:scale-95" type="button" onclick="openProcurementModal()">
+      <span class="material-symbols-outlined text-[20px]">add</span>
+      <span>New Procurement</span>
+    </button>
+  </div>
+</div>
+
+<!-- 3-Column High-Contrast Metric Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+  <!-- Metric 1: Pending Bid Request (Amber/Orange) -->
+  <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-secondary-container via-secondary to-on-secondary-fixed text-on-secondary p-space-lg flex flex-col justify-between shadow-md min-h-[170px]">
+    <div class="absolute -right-4 -bottom-4 w-28 h-28 bg-surface-container-lowest/10 rounded-full blur-xl pointer-events-none"></div>
+    <div class="flex items-start justify-between">
+      <div class="flex flex-col">
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary-fixed opacity-90">Pending Bid Request</span>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-surface-container-lowest/15 backdrop-blur-sm flex items-center justify-center">
+        <span class="material-symbols-outlined text-surface text-[24px]">hourglass_top</span>
+      </div>
+    </div>
+    <div class="mt-space-md flex items-end justify-between">
+      <div class="flex flex-col">
+        <span class="font-metric-stat text-metric-stat text-surface font-extrabold tracking-tight leading-none">{{ stats.pending }}</span>
+        <span class="font-label-sm text-label-sm text-secondary-fixed font-semibold mt-1">Notices Active</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metric 2: Completed Bid Request (Vibrant Brand Emerald Green) -->
+  <div class="relative overflow-hidden rounded-xl bg-primary-container text-on-primary p-space-lg flex flex-col justify-between shadow-md min-h-[170px]">
+    <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary-fixed/20 rounded-full blur-xl pointer-events-none"></div>
+    <div class="flex items-start justify-between">
+      <div class="flex flex-col">
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-primary-fixed opacity-90">Completed Bid Request</span>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-surface-container-lowest/15 backdrop-blur-sm flex items-center justify-center">
+        <span class="material-symbols-outlined text-surface text-[24px]">done_all</span>
+      </div>
+    </div>
+    <div class="mt-space-md flex items-end justify-between">
+      <div class="flex flex-col">
+        <span class="font-metric-stat text-metric-stat text-surface font-extrabold tracking-tight leading-none">{{ stats.complete }}</span>
+        <span class="font-label-sm text-label-sm text-primary-fixed font-semibold mt-1">Envelopes Cleared</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metric 3: Total Bids Awarded (Won) (Deep Accent Orange / Emerald Gold) -->
+  <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-secondary via-on-secondary-fixed-variant to-inverse-surface text-on-secondary p-space-lg flex flex-col justify-between shadow-md min-h-[170px]">
+    <div class="absolute right-0 bottom-0 w-36 h-36 bg-secondary-container/20 rounded-full blur-2xl pointer-events-none"></div>
+    <div class="flex items-start justify-between">
+      <div class="flex flex-col">
+        <span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary-fixed opacity-90">Total Bids Awarded (Won)</span>
+      </div>
+      <div class="w-10 h-10 rounded-lg bg-surface-container-lowest/15 backdrop-blur-sm flex items-center justify-center">
+        <span class="material-symbols-outlined text-secondary-fixed text-[24px]">emoji_events</span>
+      </div>
+    </div>
+    <div class="mt-space-md flex items-end justify-between">
+      <div class="flex flex-col">
+        <span class="font-metric-stat text-metric-stat text-surface font-extrabold tracking-tight leading-none">{{ stats.awarded }}</span>
+        <span class="font-label-sm text-label-sm text-secondary-fixed font-semibold mt-1">Contracts Won</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section aria-labelledby="surplus-inventory-heading" class="overflow-hidden rounded-xl border border-outline/30 bg-surface-container-lowest shadow-sm">
+  <div class="flex flex-col gap-space-sm border-b border-outline/30 bg-inverse-surface px-space-lg py-space-md text-inverse-on-surface sm:flex-row sm:items-center sm:justify-between">
+    <div class="flex items-center gap-space-sm">
+      <span class="material-symbols-outlined text-primary-fixed">inventory</span>
+      <div>
+        <h2 id="surplus-inventory-heading" class="font-headline-sm text-headline-sm">Available/Excess Stock</h2>
+        <p class="mt-1 font-body-sm text-body-sm text-inverse-on-surface/80">Add stock manually or allocate surplus to an unfilled procurement item.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-space-sm">
+      <span class="w-fit rounded-full bg-primary-container px-3 py-1 font-label-sm text-label-sm text-on-primary">{{ surplus_items|length }} item{% if surplus_items|length != 1 %}s{% endif %}</span>
+      <button type="button" onclick="document.getElementById('addAvailableStockDialog').showModal()" class="inline-flex items-center gap-space-xs rounded-lg bg-primary-container px-space-md py-2 font-label-md text-label-md text-on-primary transition-colors hover:bg-primary">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        <span>Add Stock</span>
+      </button>
+    </div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full border-separate border-spacing-0 text-left">
+      <thead class="bg-surface-container">
+        <tr>
+          <th class="border-b border-outline/30 px-space-md py-3 font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Item</th>
+          <th class="border-b border-outline/30 px-space-md py-3 text-center font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Available Quantity</th>
+          <th class="border-b border-outline/30 px-space-md py-3 font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Expiration</th>
+          <th class="border-b border-outline/30 px-space-md py-3 font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Source Procurement</th>
+          <th class="border-b border-outline/30 px-space-md py-3 text-right font-label-sm text-label-sm uppercase tracking-wide text-on-surface-variant">Manage / Allocate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for stock in surplus_items %}
+        <tr class="transition-colors hover:bg-surface-container/70">
+          <td class="border-b border-outline/20 px-space-md py-3">
+            <span class="font-headline-sm text-headline-sm text-on-surface">{{ stock.name }}</span>
+            {% if stock.unit %}<span class="ml-1 font-body-sm text-body-sm text-on-surface-variant">({{ stock.unit }})</span>{% endif %}
+          </td>
+          <td class="border-b border-outline/20 px-space-md py-3 text-center">
+            <!-- View mode -->
+            <span id="view-qty-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode inline-flex rounded-full bg-primary-fixed px-3 py-1 font-label-sm text-label-sm text-on-primary-fixed">{{ stock.quantity }}</span>
+            <!-- Edit mode -->
+            <div id="edit-qty-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden">
+              <input type="number" name="quantity" min="0" value="{{ stock.quantity }}" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+          </td>
+          <td class="border-b border-outline/20 px-space-md py-3 font-body-md text-body-md">
+            <!-- View mode -->
+            <span id="view-exp-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode {% if stock.expiration_date %}{% if stock.expiration_date <= warning_cutoff %}text-error{% else %}text-on-surface{% endif %}{% else %}text-on-surface-variant{% endif %}">
+              {% if stock.expiration_date %}{{ stock.expiration_date.strftime('%b %d, %Y') }}{% else %}Not set{% endif %}
+            </span>
+            <div id="view-exp-status-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode block mt-1">
+              {% if stock.expiration_date %}
+                {% if stock.expiration_date < today %}
+                  <span class="font-label-sm text-label-sm text-error">Expired — remove or discard</span>
+                {% elif stock.expiration_date == today %}
+                  <span class="font-label-sm text-label-sm text-error">Expires today</span>
+                {% elif stock.expiration_date <= warning_cutoff %}
+                  <span class="font-label-sm text-label-sm text-error">Expiring within 30 days</span>
+                {% endif %}
+              {% endif %}
+            </div>
+            <!-- Edit mode -->
+            <div id="edit-exp-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden">
+              <input type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="min-w-0 flex-1 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+          </td>
+          <td class="border-b border-outline/20 px-space-md py-3 font-body-md text-body-md text-on-surface">
+            {% if stock.procurement %}
+              <a href="{{ url_for('inventory.view_procurement', procurement_id=stock.procurement.id) }}" class="text-primary underline-offset-2 hover:underline">{{ stock.procurement.title }}</a>
+            {% else %}
+              <span class="text-on-surface-variant">Manually added</span>
+            {% endif %}
+          </td>
+          <td class="border-b border-outline/20 px-space-md py-3">
+            <div class="flex flex-col gap-space-sm">
+              <!-- View mode actions -->
+              <div id="view-actions-{{ stock.source_type }}{{ stock.source_id }}" class="view-mode flex items-end gap-space-xs">
+                {% if stock.source_type == 'manual' %}
+                <button type="button" onclick="toggleEdit('{{ stock.source_type }}{{ stock.source_id }}', true)" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                  <span class="material-symbols-outlined text-[18px]">edit</span>
+                  <span>Edit Details</span>
+                </button>
+                <form action="{{ url_for('inventory.delete_available_stock', stock_id=stock.source_id) }}" method="POST" onsubmit="return confirm('Delete {{ stock.name }} from available stock?');">
+                  <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-error/40 px-3 py-2 font-label-sm text-label-sm text-error transition-colors hover:bg-error-container">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                    <span>Delete</span>
+                  </button>
+                </form>
+                {% else %}
+                <a href="{{ url_for('inventory.view_procurement', procurement_id=stock.procurement.id) }}" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                  <span class="material-symbols-outlined text-[18px]">edit</span>
+                  <span>Edit Item</span>
+                </a>
+                <form action="{{ url_for('inventory.remove_surplus', item_id=stock.source_id) }}" method="POST" onsubmit="return confirm('Remove excess {{ stock.name }} from available stock? The procurement target quantity will be kept.');">
+                  <button type="submit" class="inline-flex items-center gap-1 rounded-lg border border-error/40 px-3 py-2 font-label-sm text-label-sm text-error transition-colors hover:bg-error-container">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                    <span>Remove Excess</span>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+              <!-- Edit mode actions -->
+              <div id="edit-actions-{{ stock.source_type }}{{ stock.source_id }}" class="edit-mode hidden flex items-end gap-space-xs">
+                <button type="button" onclick="saveRow('{{ stock.source_type }}{{ stock.source_id }}')" class="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-sm text-label-sm text-on-primary transition-colors hover:bg-primary">
+                  <span class="material-symbols-outlined text-[18px]">save</span>
+                  <span>Save</span>
+                </button>
+                <button type="button" onclick="toggleEdit('{{ stock.source_type }}{{ stock.source_id }}', false)" class="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 font-label-sm text-label-sm text-on-surface transition-colors hover:bg-surface-container">
+                  <span class="material-symbols-outlined text-[18px]">cancel</span>
+                  <span>Cancel</span>
+                </button>
+              </div>
+              <!-- Update form (hidden, submitted by Save) -->
+              <form id="update-form-{{ stock.source_type }}{{ stock.source_id }}" action="{% if stock.source_type == 'surplus' %}{{ url_for('inventory.update_surplus', item_id=stock.source_id) }}{% else %}{{ url_for('inventory.update_available_stock', stock_id=stock.source_id) }}{% endif %}" method="POST" class="hidden">
+                <input type="number" name="{% if stock.source_type == 'surplus' %}surplus_qty{% else %}quantity{% endif %}" min="0" value="{{ stock.quantity }}">
+                <input type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}">
+              </form>
+              {% if allocatable_items %}
+              <form action="{{ url_for('inventory.allocate_available_stock', source_type=stock.source_type, source_id=stock.source_id) }}" method="POST" class="flex items-center gap-space-sm">
+                <label class="sr-only" for="destination{{ stock.source_type }}{{ stock.source_id }}">Procurement item to receive {{ stock.name }}</label>
+                <select id="destination{{ stock.source_type }}{{ stock.source_id }}" name="destination_item_id" required class="max-w-xs truncate rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 font-body-sm text-body-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                  <option value="">Choose procurement item</option>
+                  {% for destination in allocatable_items %}
+                  <option value="{{ destination.item.id }}" title="{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})">{{ destination.item.procurement.title }} — {{ destination.item.name }} (needs {{ destination.remaining_quantity }})</option>
+                  {% endfor %}
+                </select>
+                <label class="sr-only" for="allocateQty{{ stock.source_type }}{{ stock.source_id }}">Quantity to allocate</label>
+                <input id="allocateQty{{ stock.source_type }}{{ stock.source_id }}" type="number" name="quantity" min="1" max="{{ stock.quantity }}" value="1" required class="w-20 rounded-lg border border-outline bg-surface-container-lowest px-2 py-2 text-right font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <button type="submit" class="inline-flex items-center gap-1 rounded-lg bg-primary-container px-3 py-2 font-label-sm text-label-sm text-on-primary transition-colors hover:bg-primary">
+                  <span class="material-symbols-outlined text-[18px]">move_down</span>
+                  <span>Allocate</span>
+                </button>
+              </form>
+              {% else %}
+              <span class="text-right font-body-sm text-body-sm text-on-surface-variant">No unfilled procurement items</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="px-space-lg py-space-lg text-center font-body-md text-body-md text-on-surface-variant">No excess stock is available yet. Add stock manually or record delivery quantities above a procurement target.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% for stock in manual_stocks %}
+<dialog id="editAvailableStock{{ stock.id }}" class="w-[calc(100%-2rem)] max-w-xl rounded-xl border border-outline/30 bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-inverse-surface/60">
+  <form action="{{ url_for('inventory.edit_available_stock', stock_id=stock.id) }}" method="POST">
+    <div class="flex items-center justify-between border-b border-outline/30 bg-inverse-surface px-space-lg py-space-md text-inverse-on-surface">
+      <h2 class="font-headline-sm text-headline-sm">Edit Available Stock</h2>
+      <button type="button" aria-label="Close dialog" onclick="this.closest('dialog').close()" class="rounded-lg p-1 transition-colors hover:bg-inverse-on-surface/10">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 gap-space-md p-space-lg sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Item Name
+        <input type="text" name="name" value="{{ stock.name }}" required maxlength="255" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface">Quantity
+        <input type="number" name="quantity" value="{{ stock.quantity }}" min="1" required class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface">Unit
+        <input type="text" name="unit" value="{{ stock.unit or '' }}" maxlength="50" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Expiration Date
+        <input type="date" name="expiration_date" value="{{ stock.expiration_date.isoformat() if stock.expiration_date else '' }}" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+    </div>
+    <div class="flex justify-end gap-space-sm border-t border-outline/30 bg-surface-container-low px-space-lg py-space-md">
+      <button type="button" onclick="this.closest('dialog').close()" class="rounded-lg border border-outline px-space-md py-2.5 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container">Cancel</button>
+      <button type="submit" class="rounded-lg bg-primary-container px-space-md py-2.5 font-label-md text-label-md text-on-primary transition-colors hover:bg-primary">Save Changes</button>
+    </div>
+  </form>
+</dialog>
+{% endfor %}
+
+<dialog id="addAvailableStockDialog" class="w-[calc(100%-2rem)] max-w-xl rounded-xl border border-outline/30 bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-inverse-surface/60">
+  <form action="{{ url_for('inventory.add_available_stock') }}" method="POST">
+    <div class="flex items-center justify-between border-b border-outline/30 bg-inverse-surface px-space-lg py-space-md text-inverse-on-surface">
+      <h2 class="font-headline-sm text-headline-sm">Add Available Stock</h2>
+      <button type="button" aria-label="Close dialog" onclick="this.closest('dialog').close()" class="rounded-lg p-1 transition-colors hover:bg-inverse-on-surface/10">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 gap-space-md p-space-lg sm:grid-cols-2">
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Item Name
+        <input type="text" name="name" required maxlength="255" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface">Quantity
+        <input type="number" name="quantity" min="1" required class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface">Unit
+        <input type="text" name="unit" maxlength="50" placeholder="pcs, box, etc." class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+      <label class="flex flex-col gap-1.5 font-label-md text-label-md text-on-surface sm:col-span-2">Expiration Date
+        <input type="date" name="expiration_date" class="w-full rounded-lg border border-outline bg-surface-container-lowest px-space-md py-2.5 font-body-md text-body-md text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+      </label>
+    </div>
+    <div class="flex justify-end gap-space-sm border-t border-outline/30 bg-surface-container-low px-space-lg py-space-md">
+      <button type="button" onclick="this.closest('dialog').close()" class="rounded-lg border border-outline px-space-md py-2.5 font-label-md text-label-md text-on-surface transition-colors hover:bg-surface-container">Cancel</button>
+      <button type="submit" class="rounded-lg bg-primary-container px-space-md py-2.5 font-label-md text-label-md text-on-primary transition-colors hover:bg-primary">Add Stock</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Interactive Navigation Tabs (Driven by Jinja) -->
+<div class="flex items-center justify-between border-b-2 border-surface-container-high pt-space-sm">
+  <div class="flex items-center gap-space-lg">
+    <a href="{{ url_for('inventory.index', tab='active') }}" class="relative pb-3 flex items-center gap-2 font-headline-sm text-headline-sm transition-colors {% if current_tab == 'active' %}font-bold text-primary{% else %}font-semibold text-tertiary hover:text-on-surface{% endif %}">
+      <span>For Deliveries</span>
+      <span class="absolute bottom-[-2px] left-0 w-full h-[3px] rounded-t {% if current_tab == 'active' %}bg-primary{% else %}hidden{% endif %}"></span>
+    </a>
+    <a href="{{ url_for('inventory.index', tab='archive') }}" class="relative pb-3 flex items-center gap-2 font-headline-sm text-headline-sm transition-colors {% if current_tab == 'archive' %}font-bold text-primary{% else %}font-semibold text-tertiary hover:text-on-surface{% endif %}">
+      <span>Archive List</span>
+      <span class="absolute bottom-[-2px] left-0 w-full h-[3px] rounded-t {% if current_tab == 'archive' %}bg-primary{% else %}hidden{% endif %}"></span>
+    </a>
+  </div>
+  <div class="hidden lg:flex items-center gap-space-sm text-on-surface-variant font-label-sm text-label-sm">
+    <span class="material-symbols-outlined text-[16px] text-tertiary">sort</span>
+    <span>Sorted by: <strong>Upcoming Pre-Bid Opening</strong></span>
+  </div>
+</div>
+
+<!-- Project Cards Grid (Dynamic Loop) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-md">
+  {% for p in procurements %}
+  <div class="bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden">
+    
+    <!-- Institutional Header Bar -->
+    <div class="bg-inverse-surface px-space-md py-2.5 flex items-center justify-between text-inverse-on-surface">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="material-symbols-outlined text-[16px] text-primary-fixed flex-shrink-0">domain</span>
+        <span class="font-label-sm text-label-sm font-bold uppercase tracking-wider truncate">{{ p.municipality }}</span>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        {% if p.status == 'Awarded' %}
+          <span class="bg-primary-container text-on-primary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold tracking-wide">Awarded</span>
+        {% elif p.status == 'Archived' %}
+          <span class="bg-tertiary-container text-on-tertiary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold tracking-wide">Archived</span>
+        {% else %}
+          <span class="bg-secondary-container/90 text-on-secondary px-2 py-0.5 rounded font-label-sm text-label-sm font-bold tracking-wide">Ongoing</span>
+        {% endif %}
+
+        {% if p.is_government %}
+          <span class="bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded font-label-sm text-label-sm font-bold tracking-wide">Gov</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Card Body -->
+    <div class="p-space-md flex-1 flex flex-col justify-between space-y-space-md">
+      <div>
+        <h2 class="font-headline-sm text-headline-sm text-on-surface leading-snug font-bold line-clamp-2" title="{{ p.title }}">
+          {{ p.title }}
+        </h2>
+      </div>
+      
+      <!-- Financials & Timeline Breakdown -->
+      <div class="bg-surface-container-low rounded-lg p-space-sm space-y-2">
+        <div class="flex items-baseline justify-between">
+          <span class="font-label-sm text-label-sm text-tertiary uppercase font-semibold">Approved Budget (ABC)</span>
+          <!-- Added Currency symbol and Jinja Float formatting -->
+          <span class="font-headline-sm text-headline-sm text-primary font-bold tabular-nums">₱ {{ "{:,.2f}".format(p.abc | float) }}</span>
+        </div>
+        <div class="pt-1.5 space-y-1">
+          <div class="flex items-center gap-1.5 text-on-surface-variant font-body-sm text-body-sm">
+            <span class="material-symbols-outlined text-[16px] text-secondary">calendar_clock</span>
+            <span><strong class="text-on-surface">Pre-Bid:</strong> {{ p.pre_bid_date }}</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-on-surface-variant font-body-sm text-body-sm truncate">
+            <span class="material-symbols-outlined text-[16px] text-tertiary">meeting_room</span>
+            <span class="truncate" title="{{ p.place_of_bidding }}"><strong class="text-on-surface">Venue:</strong> {{ p.place_of_bidding }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Staging Progress Bar -->
+      <div class="space-y-1">
+        <div class="flex items-center justify-between font-label-sm text-label-sm">
+          <span class="text-on-surface-variant font-medium">Stock Completion</span>
+          <span class="font-bold text-primary tabular-nums">{{ p.progress }}%</span>
+        </div>
+        <div class="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
+          {% set progress_class = 'bg-primary' if p.progress == 100 else 'bg-secondary-container' %}
+          <div class="h-full {{ progress_class }} rounded-full transition-all duration-500" style="width: {{ p.progress }}%;"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="pt-2 space-y-2">
+        <a href="{{ url_for('inventory.view_procurement', procurement_id=p.id) }}" class="w-full flex items-center justify-center gap-2 py-2 px-space-md rounded-lg bg-surface-container-highest hover:bg-primary hover:text-on-primary text-on-surface font-label-md text-label-md transition-all shadow-sm">
+          <span class="material-symbols-outlined text-[18px]">folder_open</span>
+          <span>Open Inventory Folder</span>
+        </a>
+        <a href="{{ url_for('inventory.print_procurement', procurement_id=p.id) }}" target="_blank" rel="noopener" class="w-full flex items-center justify-center gap-2 py-2 px-space-md rounded-lg border border-outline/50 hover:bg-surface-container text-on-surface font-label-md text-label-md transition-all">
+          <span class="material-symbols-outlined text-[18px]">print</span>
+          <span>Print Procurement</span>
+        </a>
+
+        {% if current_tab == 'archive' %}
+        <form action="{{ url_for('inventory.delete_procurement', procurement_id=p.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this procurement?');">
+          <button type="submit" class="w-full flex items-center justify-center gap-2 py-2 px-space-md rounded-lg bg-error-container text-on-error-container hover:bg-error hover:text-on-error font-label-md text-label-md transition-all">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+            <span>Delete Permanently</span>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-span-full text-center text-tertiary py-12 bg-surface-container-lowest rounded-xl border border-dashed border-outline-variant">
+    <span class="material-symbols-outlined text-[48px] text-outline mb-2">folder_off</span>
+    <p class="font-body-md text-body-md">No procurement folders found in this view.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Add Procurement Modal Component -->
+<div id="addProcurementModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm p-4">
+  <div class="bg-surface-container-lowest rounded-xl shadow-xl border-0 overflow-hidden w-full max-w-2xl">
+    <form action="{{ url_for('inventory.add_procurement') }}" method="POST">
+      <div class="bg-inverse-surface text-inverse-on-surface px-space-lg py-space-md flex items-center justify-between">
+        <h5 class="font-headline-md text-headline-md font-bold flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary-fixed">create_new_folder</span>
+          <span>Create Procurement Folder</span>
+        </h5>
+        <button type="button" onclick="closeProcurementModal()" class="text-inverse-on-surface hover:text-error-container transition-colors">
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+      </div>
+      
+      <div class="p-space-lg space-y-4">
+        <div>
+          <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Procurement Title</label>
+          <input type="text" name="title" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" required>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Approved Budget (ABC)</label>
+            <input type="text" name="abc" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. ₱1,500,000.00">
+          </div>
+          <div>
+            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Pre-Bid Conference</label>
+            <input type="text" name="pre_bid_date" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="DD/MM/YYYY HH:MM AM/PM">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Place of Bidding</label>
+            <input type="text" name="place_of_bidding" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary">
+          </div>
+          <div>
+            <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Municipality</label>
+            <input type="text" name="municipality" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary">
+          </div>
+        </div>
+        <div>
+          <label class="block font-label-sm text-label-sm font-bold text-on-surface mb-1">Government Agency / Office</label>
+          <input type="text" name="agency" class="w-full px-3 py-2 rounded-lg border border-outline-variant bg-surface text-on-surface focus:outline-none focus:border-primary" placeholder="e.g. Department of Education (DepEd)">
+        </div>
+      </div>
+
+      <div class="bg-surface-container-low px-space-lg py-space-md border-t border-surface-container-high flex justify-end gap-space-sm">
+        <button type="button" onclick="closeProcurementModal()" class="px-4 py-2 rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors">Cancel</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md shadow-sm transition-all">Create Folder</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Modal controls
+  function openProcurementModal() {
+    document.getElementById('addProcurementModal').classList.remove('hidden');
+  }
+
+  function closeProcurementModal() {
+    document.getElementById('addProcurementModal').classList.add('hidden');
+  }
+
+  // Input Formatters
+  document.addEventListener('DOMContentLoaded', function() {
+    // ABC Currency Formatter
+    const abcInput = document.querySelector('input[name="abc"]');
+    if (abcInput) {
+      abcInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/[^0-9.]/g, '');
+        let parts = value.split('.');
+        
+        if (parts.length > 2) {
+          parts = [parts[0], parts.slice(1).join('')];
+        }
+        
+        if (parts[0]) {
+          parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
+        }
+        
+        e.target.value = parts.length > 0 && parts[0] !== '' ? '₱ ' + parts.join('.') : '';
+      });
+    }
+
+    // Pre-Bid Conference Date & Time Auto-Formatter (DD/MM/YYYY HH:MM AM/PM)
+    const dateInput = document.querySelector('input[name="pre_bid_date"]');
+    if (dateInput) {
+      dateInput.addEventListener('input', function(e) {
+        let val = e.target.value.replace(/\D/g, '');
+        let formatted = '';
+
+        if (val.length > 0) formatted += val.substring(0, 2); // DD
+        if (val.length >= 3) formatted += '/' + val.substring(2, 4); // MM
+        if (val.length >= 5) formatted += '/' + val.substring(4, 8); // YYYY
+        if (val.length >= 9) formatted += ' ' + val.substring(8, 10); // HH
+        if (val.length >= 11) formatted += ':' + val.substring(10, 12); // MM
+        
+        if (val.length >= 12) {
+          let hour = parseInt(val.substring(8, 10), 10);
+          formatted += (hour >= 12) ? ' PM' : ' AM';
+        }
+
+        e.target.value = formatted.trim();
+      });
+    });
+  });
+
+  // Inline edit for available stock rows
+  function toggleEdit(id, editing) {
+    const idSel = id;
+    document.querySelectorAll(`#view-qty-${idSel}, #view-exp-${idSel}, #view-exp-status-${idSel}, #view-actions-${idSel}`).forEach(el => el.classList.toggle('hidden', editing));
+    document.querySelectorAll(`#edit-qty-${idSel}, #edit-exp-${idSel}, #edit-actions-${idSel}`).forEach(el => el.classList.toggle('hidden', !editing));
+  }
+
+  function saveRow(id) {
+    document.getElementById(`update-form-${id}`).submit();
+  }
+</script>
+{% endblock %}
