@@ -10,10 +10,10 @@
     <p class="font-body-md text-body-md text-on-surface-variant"></p>
   </div>
   <div class="flex items-center gap-space-sm flex-shrink-0">
-    <button class="flex items-center gap-space-xs px-space-lg py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-md active:scale-95" type="button" onclick="openProcurementModal()">
-      <span class="material-symbols-outlined text-[20px]">add</span>
-      <span>New Procurement</span>
-    </button>
+   <a href="{{ url_for('inventory.add_procurement') }}" class="flex items-center gap-space-xs px-space-lg py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md transition-all shadow-md">
+  <span class="material-symbols-outlined text-[20px]">add</span>
+  <span>New Procurement</span>
+</a>
   </div>
 </div>
 
