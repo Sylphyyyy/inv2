@@ -197,6 +197,4 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: "Internal server error" });
 });
 
-app.listen(port, () => {
-  console.log(`Procurement pipeline listening on port ${port}`);
-});
+export { app };
