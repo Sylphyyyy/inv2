@@ -2,6 +2,7 @@ import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
 from app.utils.ocr_parser import parse_bid_document
+from app.utils.pipeline_client import convert_pipeline_payload, pipeline_upload
 
 bid_upload_bp = Blueprint('bid_upload', __name__, url_prefix='/bids')
 
@@ -38,9 +39,18 @@ def scan_bid():
             file.save(file_path)
             print(f"File saved successfully to: {file_path}")
 
-            # Process document via OCR
-            print("Sending file to parse_bid_document()...")
-            parsed_data = parse_bid_document(file_path)
+            try:
+                pipeline_response = pipeline_upload(file_path, callback_id=filename)
+            except RuntimeError as exc:
+                print(f"Procurement pipeline unavailable: {exc}")
+                pipeline_response = None
+
+            if pipeline_response:
+                parsed_data = convert_pipeline_payload(pipeline_response)
+                print("Document scan extracted with procurement pipeline.")
+            elif pipeline_response is None:
+                print("Sending file to parse_bid_document()...")
+                parsed_data = parse_bid_document(file_path)
             if parsed_data and parsed_data.get('items') is not None:
                 print(f"Document scan extracted {len(parsed_data['items'])} item(s).")
                 flash('Document scanned successfully!', 'success')
