@@ -103,28 +103,15 @@ async function processJob(job) {
   job.startedAt = new Date().toISOString();
 
   try {
-    // LLM/Gemini extraction disabled for webhook send/receive testing
-    // const extracted = await downloadAndExtractPdf(job.sourceUrl, {
-    //   maxBytes: maxPdfBytes,
-    //   timeoutMs: pdfTimeoutMs
-    // });
-    // job.pageCount = extracted.pageCount;
-    // job.result = await extractProcurement(extractionClient, extracted.text);
-    job.pageCount = 1;
-    job.result = {
-      endpoint_action: "upsert_procurement_record",
-      publish_status: "ready",
-      quality_flags: [],
-      training_candidates: [],
-      payload: {
-        procurementDate: null,
-        place: null,
-        abcAmount: null,
-        abcCurrency: null,
-        bidDate: null,
-        medicines: []
-      }
-    };
+    if (!extractionClient) {
+      throw new Error("OPENAI_API_KEY is not configured");
+    }
+    const extracted = await downloadAndExtractPdf(job.sourceUrl, {
+      maxBytes: maxPdfBytes,
+      timeoutMs: pdfTimeoutMs
+    });
+    job.pageCount = extracted.pageCount;
+    job.result = await extractProcurement(extractionClient, extracted.text);
     job.status = "completed";
   } catch (error) {
     job.status = "failed";
@@ -179,68 +166,27 @@ app.post(
       return res.status(503).json({ error: "OPENAI_API_KEY is not configured" });
     }
 
-    const callbackId = typeof req.body.callbackId === "string" ? req.body.callbackId : null;
-    const job = {
-      id: randomUUID(),
-      status: "queued",
-      callbackId,
-      sourceUrl: null,
-      createdAt: new Date().toISOString(),
-      result: null,
-      error: null,
-      downstreamDelivered: null
-    };
-    jobs.set(job.id, job);
-
     try {
-      // LLM/Gemini extraction disabled for webhook send/receive testing
-      // const pdfParse = (await import("pdf-parse")).default;
-      // const parsed = await pdfParse(req.file.buffer);
-      // const text = (parsed.text || "").trim();
-      // if (!text) {
-      //   job.status = "failed";
-      //   job.error = "The PDF contains no extractable text; scanned-PDF OCR is not yet enabled";
-      //   job.completedAt = new Date().toISOString();
-      //   await postToDownstream(job);
-      //   return res.status(422).json({
-      //     jobId: job.id,
-      //     error: job.error
-      //   });
-      // }
-      // const result = await extractProcurement(extractionClient, text);
-      job.pageCount = 1;
-      job.result = {
-        endpoint_action: "upsert_procurement_record",
-        publish_status: "ready",
-        quality_flags: [],
-        training_candidates: [],
-        payload: {
-          procurementDate: null,
-          place: null,
-          abcAmount: null,
-          abcCurrency: null,
-          bidDate: null,
-          medicines: []
-        }
-      };
-      job.status = "completed";
-      job.completedAt = new Date().toISOString();
-      await postToDownstream(job);
+      const pdfParse = (await import("pdf-parse")).default;
+      const parsed = await pdfParse(req.file.buffer);
+      const text = (parsed.text || "").trim();
+      if (!text) {
+        return res.status(422).json({
+          error: "The PDF contains no extractable text; scanned-PDF OCR is not yet enabled"
+        });
+      }
+
+      const result = await extractProcurement(extractionClient, text);
       res.json({
-        jobId: job.id,
-        callbackId,
+        callbackId:
+          typeof req.body.callbackId === "string" ? req.body.callbackId : null,
         sourceName: req.file.originalname,
-        pageCount: job.pageCount,
+        pageCount: parsed.numpages || null,
         result
       });
     } catch (error) {
-      job.status = "failed";
-      job.error = error instanceof Error ? error.message : "Extraction failed";
-      job.completedAt = new Date().toISOString();
-      await postToDownstream(job);
       res.status(502).json({
-        jobId: job.id,
-        error: job.error
+        error: error instanceof Error ? error.message : "Extraction failed"
       });
     }
   }
@@ -251,4 +197,6 @@ app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: "Internal server error" });
 });
 
-export { app };
+app.listen(port, () => {
+  console.log(`Procurement pipeline listening on port ${port}`);
+});
